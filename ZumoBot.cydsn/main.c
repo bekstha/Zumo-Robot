@@ -140,6 +140,7 @@ void zmain(void)
                 }
                 vTaskDelay(100);
                 printf("Button is being pressed\n");
+                printf("%d %f\r\n",adcresult, volts);
                 continue;
 
             }else{
@@ -346,10 +347,19 @@ void zmain(void)
 
     vTaskDelay(3000);
     
-    motor_forward(100,2000);     // moving forward
-    motor_turn(200,50,2000);     // turn
-    motor_turn(50,200,2000);     // turn
-    motor_backward(100,2000);    // moving backward
+    motor_forward(100,3150);     // moving forward
+    motor_turn(200,50,575);     // turn
+    //motor_turn(255,0,250);
+    motor_forward(100,2375);
+    motor_turn(200,50,560);     // turn
+    //motor_turn(255,0,250);
+    motor_forward(100,2500);
+    motor_turn(200,0,400);
+    motor_turn(150,100,1400);     // turn
+    motor_turn(200,100,500);     // turn
+    motor_forward(100,1100);
+    
+    //motor_backward(100,2000);    // moving backward
      
     motor_forward(0,0);         // stop motors
 
