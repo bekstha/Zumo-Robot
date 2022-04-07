@@ -241,14 +241,26 @@ void zmain(void)
 void zmain(void)
 {
     Ultra_Start();                          // Ultra Sonic Start function
-    
+    printf("\n\nBoot\n");
+    while(SW1_Read() == 1) vTaskDelay(10);
     while(true) {
         int d = Ultra_GetDistance();
         // Print the detected distance (centimeters)
         printf("distance = %d\r\n", d);
-        vTaskDelay(200);
+        if(d < 10) {
+            motor_backward(100,100);
+            motor_start(0,0);
+            vTaskDelay(3000);
+            motor_turn(30,120,50); 
+            vTaskDelay(1000);
+            motor_start(0,0);   
+        }
+        printf("Go forward!\n");
+        motor_start();
+        motor_forward(100,100);
+        //vTaskDelay(1000);
     }
-}   
+}  
 #endif
 
 #if 0
