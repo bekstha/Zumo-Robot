@@ -95,7 +95,7 @@ void zmain(void)
 #endif
 
 
-#if 1
+#if 0
 //battery level//
 void zmain(void)
 {
@@ -236,8 +236,10 @@ void zmain(void)
 #endif
 
 
-#if 0
+#if 1
 //ultrasonic sensor//
+    
+    //assignment 2 reversing and turing left when obstcale is less than 10com
 void zmain(void)
 {
     Ultra_Start();                          // Ultra Sonic Start function
@@ -261,6 +263,36 @@ void zmain(void)
         //vTaskDelay(1000);
     }
 }  
+
+/*  reversing and making random turns between 90 to 270 degrees when the obstacle is less than 10cm
+void zmain(void)
+{
+    Ultra_Start();                          // Ultra Sonic Start function
+    printf("\n\nBoot\n");
+    while(SW1_Read() == 1) vTaskDelay(10);
+    int seed = xTaskGetTickCount();
+    srand(seed);
+    while(true) {
+        int d = Ultra_GetDistance();
+        int r1 = rand() % 180;
+        //int r2 = rand() % 180;
+        
+        // Print the detected distance (centimeters)
+        printf("distance = %d, rand1 = %d\r\n", d, r1);
+        if(d < 10) {
+            motor_backward(100,5);
+            motor_start(0,0);
+            vTaskDelay(4000);
+            motor_turn(r1,r1+90,50); 
+            vTaskDelay(1000);
+            motor_start(0,0);   
+        }
+        printf("Go forward!\n");
+        motor_start();
+        motor_forward(80,100);
+        //vTaskDelay(1000);
+    }
+}
 #endif
 
 #if 0
@@ -284,7 +316,7 @@ void zmain(void)
         if(led) printf("Led is ON\n");
         else printf("Led is OFF\n");
     }    
- }   
+ }   */
 #endif
 
 
