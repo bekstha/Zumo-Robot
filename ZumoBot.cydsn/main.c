@@ -236,7 +236,7 @@ void zmain(void)
 #endif
 
 
-#if 1
+#if 0
 //ultrasonic sensor//
     
     //assignment 2 reversing and turing left when obstcale is less than 10com
@@ -263,8 +263,10 @@ void zmain(void)
         //vTaskDelay(1000);
     }
 }  
+#endif
 
-/*  reversing and making random turns between 90 to 270 degrees when the obstacle is less than 10cm
+#if 0
+  //reversing and making random turns between 90 to 270 degrees when the obstacle is less than 10cm
 void zmain(void)
 {
     Ultra_Start();                          // Ultra Sonic Start function
@@ -316,7 +318,7 @@ void zmain(void)
         if(led) printf("Led is ON\n");
         else printf("Led is OFF\n");
     }    
- }   */
+ }   
 #endif
 
 
@@ -352,34 +354,91 @@ void zmain(void)
 #endif
 
 
-#if 0
+#if 1
 //reflectance
+    
 void zmain(void)
 {
-    struct sensors_ ref;
+    //struct sensors_ ref;
     struct sensors_ dig;
-
+    
+    int delay=5;
+    int speed=50;
+    int intersectionCounter = 0;
+    int turnFactor = 3;
+    int sharpTurnFactor = 6;
+    
+    
+    motor_start();
+    motor_forward(0,0);
+    
     reflectance_start();
     reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
     
+    // waiting for user to press the switch button and lift
+    while(SW1_Read() == 1) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(10);
+    
+    
+    
+    
+    motor_forward(speed,delay);
 
     while(true)
     {
+        /*
         // read raw sensor values
         reflectance_read(&ref);
         // print out each period of reflectance sensors
         printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
-        
+        */
+
         // read digital values that are based on threshold. 0 = white, 1 = black
         // when blackness value is over threshold the sensors reads 1, otherwise 0
         reflectance_digital(&dig); 
         //print out 0 or 1 according to results of reflectance period
-        printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);        
+        //printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);        
         
-        vTaskDelay(200);
+        if(dig.L3==1 && dig.R3==1){
+            
+            intersectionCounter += 1;
+            if (intersectionCounter > 100){
+                motor_forward(0,0);
+                
+            } else{
+                motor_forward(speed,delay);
+                
+            }
+        } else if(dig.L1==1 && dig.R1==1){
+            motor_forward(speed,delay);
+            
+        } else if(dig.L2==1 && dig.L1==1){
+            motor_turn(speed/turnFactor,turnFactor*speed,delay);
+            
+        } else if(dig.R1==1 && dig.R2==1){
+            motor_turn(turnFactor*speed,speed/turnFactor,delay);
+            
+        } else if(dig.L3==1 && dig.L2==1){
+            motor_turn(speed/sharpTurnFactor,sharpTurnFactor*speed,delay);
+            
+        }else if(dig.R2==1 && dig.R3==1){
+            motor_turn(sharpTurnFactor*speed,speed/sharpTurnFactor,delay);
+            
+        }
+
+        
+        
+        
+        
+        //vTaskDelay(10);
+
     }
-}   
+}
+
+
+
 #endif
+
 
 
 #if 0
