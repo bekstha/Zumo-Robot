@@ -353,20 +353,27 @@ void zmain(void)
  }   
 #endif
 
-
-#if 1
+// Week 4 assignment 1
+#if 0
 //reflectance
     
 void zmain(void)
 {
     //struct sensors_ ref;
     struct sensors_ dig;
+    IR_Start();
     
     int delay=5;
     int speed=50;
-    int intersectionCounter = 0;
-    int turnFactor = 3;
-    int sharpTurnFactor = 6;
+    int turnFactor = 4;
+    int sharpTurnFactor = 5;
+    
+    int maxcons = 20;
+    int count = 0;
+    int a = -1;
+    int b = 0;
+    int counter = 0;
+    int inersectionCounter=0;
     
     
     motor_start();
@@ -375,15 +382,17 @@ void zmain(void)
     reflectance_start();
     reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
     
-    // waiting for user to press the switch button and lift
+    // waiting for user to press the switch button and lift from the button
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(10);
     
-    
-    
-    
-    motor_forward(speed,delay);
+    // check if the vehicle is centered.
+    do{
+        reflectance_digital(&dig);
+    } 
+    while(dig.L1==0 || dig.R1==0);
 
+    
     while(true)
     {
         /*
@@ -399,16 +408,154 @@ void zmain(void)
         //print out 0 or 1 according to results of reflectance period
         //printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);        
         
-        if(dig.L3==1 && dig.R3==1){
-            
-            intersectionCounter += 1;
-            if (intersectionCounter > 100){
-                motor_forward(0,0);
-                
+
+        if(dig.L3==0 && dig.R3==0){
+            if(count > 0){
+                count -= 1;
             } else{
-                motor_forward(speed,delay);
-                
+                a = b+1;
+                counter = a;
             }
+        } else if (dig.L3==1 && dig.R3==1){
+            if (count <= maxcons){
+                count += 1;
+            }else{
+                b = a+1;
+                counter = b;
+            }
+        }
+        
+        
+
+        
+        if(counter==2){
+            count = 0;
+            a = -1;
+            b = 0;
+            counter = 0;
+            inersectionCounter++;
+            if (inersectionCounter==1||inersectionCounter==4){
+                motor_forward(0,0);
+                IR_wait();  // wait for IR command
+            }
+
+            
+        }
+        
+        if(dig.L1==1 && dig.R1==1){
+            motor_forward(speed,delay);
+            
+        } else if(dig.L2==1 && dig.L1==1){
+            motor_turn(speed/turnFactor,turnFactor*speed,delay);
+            
+        } else if(dig.R1==1 && dig.R2==1){
+            motor_turn(turnFactor*speed,speed/turnFactor,delay);
+            
+        } else if(dig.L3==1 && dig.L2==1){
+            motor_turn(speed/sharpTurnFactor,sharpTurnFactor*speed,delay);
+            
+        }else if(dig.R2==1 && dig.R3==1){
+            motor_turn(sharpTurnFactor*speed,speed/sharpTurnFactor,delay);
+            
+        }
+
+        
+        
+        
+        
+        //vTaskDelay(10);
+
+    }
+}
+
+
+
+#endif
+
+
+// Week 4 assignment 2
+#if 0
+//reflectance
+    
+void zmain(void)
+{
+    //struct sensors_ ref;
+    struct sensors_ dig;
+    IR_Start();
+    
+    int delay=5;
+    int speed=50;
+    int turnFactor = 4;
+    int sharpTurnFactor = 5;
+    
+    int maxcons = 20;
+    int count = 0;
+    int a = -1;
+    int b = 0;
+    int counter = 0;
+    
+    
+    motor_start();
+    motor_forward(0,0);
+    
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
+    
+    // waiting for user to press the switch button and lift from the button
+    while(SW1_Read() == 1) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(10);
+    
+    // check if the vehicle is centered.
+    do{
+        reflectance_digital(&dig);
+    } 
+    while(dig.L1==0 || dig.R1==0);
+
+    
+    while(true)
+    {
+        /*
+        // read raw sensor values
+        reflectance_read(&ref);
+        // print out each period of reflectance sensors
+        printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
+        */
+
+        // read digital values that are based on threshold. 0 = white, 1 = black
+        // when blackness value is over threshold the sensors reads 1, otherwise 0
+        reflectance_digital(&dig); 
+        //print out 0 or 1 according to results of reflectance period
+        //printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);        
+        
+
+        if(dig.L3==0 && dig.R3==0){
+            if(count > 0){
+                count -= 1;
+            } else{
+                a = b+1;
+                counter = a;
+            }
+        } else if (dig.L3==1 && dig.R3==1){
+            if (count <= maxcons){
+                count += 1;
+            }else{
+                b = a+1;
+                counter = b;
+            }
+        }
+        
+        
+
+        
+        if(counter==2){
+            motor_forward(0,0);
+            count = 0;
+            a = -1;
+            b = 0;
+            counter = 0;
+            IR_wait();  // wait for IR command
+            
+
         } else if(dig.L1==1 && dig.R1==1){
             motor_forward(speed,delay);
             
@@ -438,6 +585,128 @@ void zmain(void)
 
 
 #endif
+
+
+// Week 4 assignment 3
+#if 1
+//reflectance
+    
+void zmain(void)
+{
+    //struct sensors_ ref;
+    struct sensors_ dig;
+    IR_Start();
+    
+    int delay=5;
+    int speed=50;
+    int turnFactor = 4;
+    int sharpTurnFactor = 5;
+    
+    int maxcons = 20;
+    int count = 0;
+    int a = -1;
+    int b = 0;
+    int counter = 0;
+    int inersectionCounter=0;
+    
+    
+    motor_start();
+    motor_forward(0,0);
+    
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
+    
+    // waiting for user to press the switch button and lift from the button
+    while(SW1_Read() == 1) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(10);
+    
+    // check if the vehicle is centered.
+    do{
+        reflectance_digital(&dig);
+    } 
+    while(dig.L1==0 || dig.R1==0);
+
+    
+    while(true)
+    {
+        /*
+        // read raw sensor values
+        reflectance_read(&ref);
+        // print out each period of reflectance sensors
+        printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
+        */
+
+        // read digital values that are based on threshold. 0 = white, 1 = black
+        // when blackness value is over threshold the sensors reads 1, otherwise 0
+        reflectance_digital(&dig); 
+        //print out 0 or 1 according to results of reflectance period
+        //printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);        
+        
+
+        if(dig.L3==0 && dig.R3==0){
+            if(count > 0){
+                count -= 1;
+            } else{
+                a = b+1;
+                counter = a;
+            }
+        } else if (dig.L3==1 && dig.R3==1){
+            if (count <= maxcons){
+                count += 1;
+            }else{
+                b = a+1;
+                counter = b;
+            }
+        }
+        
+        
+
+        
+        if(counter==2){
+            count = 0;
+            a = -1;
+            b = 0;
+            counter = 0;
+            inersectionCounter++;
+            if (inersectionCounter==1||inersectionCounter==4){
+                motor_forward(0,0);
+                IR_wait();  // wait for IR command
+            }
+
+            
+        }
+        
+        if(dig.L1==1 && dig.R1==1){
+            motor_forward(speed,delay);
+            
+        } else if(dig.L2==1 && dig.L1==1){
+            motor_turn(speed/turnFactor,turnFactor*speed,delay);
+            
+        } else if(dig.R1==1 && dig.R2==1){
+            motor_turn(turnFactor*speed,speed/turnFactor,delay);
+            
+        } else if(dig.L3==1 && dig.L2==1){
+            motor_turn(speed/sharpTurnFactor,sharpTurnFactor*speed,delay);
+            
+        }else if(dig.R2==1 && dig.R3==1){
+            motor_turn(sharpTurnFactor*speed,speed/sharpTurnFactor,delay);
+            
+        }
+
+        
+        
+        
+        
+        //vTaskDelay(10);
+
+    }
+}
+
+
+
+#endif
+
+
 
 
 
