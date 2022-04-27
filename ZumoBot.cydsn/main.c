@@ -588,7 +588,7 @@ void zmain(void)
 
 
 // Week 4 assignment 3
-#if 1
+#if 0
 //reflectance
     void tank_left(uint8 l_speed, uint8 r_speed, uint32 delay);
     
@@ -741,6 +741,165 @@ void tank_right(uint8 l_speed, uint8 r_speed, uint32 delay)
 }
 
 
+#endif
+
+#if 0
+//Week 5 Assignment 1
+// MQTT test
+void zmain(void)
+{
+    printf("\nBoot\n");
+    send_mqtt("Zumo06/debug", "Boot");
+
+    BatteryLed_Write(1); // Switch led on 
+    while(SW1_Read()==1);
+    BatteryLed_Write(0); // Switch led off 
+    vTaskDelay(1000);
+    int t1 = xTaskGetTickCount();
+    int t0 = 0;
+    int interval;
+
+    while(true)
+    {
+        while(SW1_Read() == 1);
+        vTaskDelay(100);
+        t1 = xTaskGetTickCount();
+        interval = t1-t0;
+        print_mqtt("Zumo06\t", "Time since last button push : %d milliseconds", interval);
+        while(SW1_Read() == 0);
+        vTaskDelay(100);
+        t0 = t1;        
+    }
+
+ }   
+#endif
+
+#if 0
+    // Week 5 Assignment 2
+    void zmain(void)
+    {
+    Ultra_Start();                          // Ultra Sonic Start function
+    send_mqtt("Zumo039/debug", "Boot");
+    
+    printf("\n\nBoot\n");
+    
+    while(SW1_Read() == 1) vTaskDelay(10);
+    int seed = xTaskGetTickCount();
+    srand(seed);
+    int ctr = 0;
+    
+    while(true) {
+        int d = Ultra_GetDistance();
+        // Print the detected distance (centimeters)
+        //printf("distance = %d, rand1 = %d\r\n", d, r1);
+        if(d < 10) {
+            motor_backward(100,5);
+            vTaskDelay(1000);
+            motor_forward(0,0);
+            
+            int r = rand() % 2;
+            
+            
+            if(r == 0){
+                motor_turn(10,250,300);
+                motor_forward(0,0);
+                motor_forward(80,100);
+                printf("Ctr: %d, Button: %d\n", ctr, SW1_Read());
+                print_mqtt("Zumo039/debug", "Ctr: %d, Button: %d, TURN = LEFT", ctr, SW1_Read());
+   
+            }
+            else
+            {
+                motor_turn(250,10,300);
+                motor_forward(0,0);
+                motor_forward(80,100);
+                printf("Ctr: %d, Button: %d\n", ctr, SW1_Read());
+                print_mqtt("Zumo039/debug", "Ctr: %d, Button: %d, TURN = RIGHT", ctr, SW1_Read());
+            }
+           
+            
+            vTaskDelay(1000);
+            ctr++;
+            vTaskDelay(1000);
+            motor_forward(0,0);
+            
+            
+        }
+        printf("Go forward!\n");
+        motor_start();
+        motor_forward(80,100);
+        //vTaskDelay(1000);
+    }
+}   
+#endif
+
+
+#if 1
+    
+// Week 5 Assignment 3
+void zmain(void)
+{
+    int count = 0;
+    struct sensors_ dig;
+    //int inital = 0;
+    TickType_t start = 0, end = 0;
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000);
+    
+    BatteryLed_Write(1); // Switch led on 
+    while(SW1_Read()==1);
+    BatteryLed_Write(0); // Switch led off 
+    vTaskDelay(1000);
+   
+    IR_Start();
+    IR_flush();
+    motor_start();
+    motor_forward(0,0);
+     
+    while(true)
+    {  
+    reflectance_digital(&dig);
+        if ((dig.R1 && dig.L1))  // if zumo is in the center 
+        {
+            motor_forward(50, 10);
+        }
+        if (dig.R3 && dig.R2 && dig.R1 && dig.L1 && dig.L2 && dig.L3) //when robot reacher the line
+        { 
+            count++;
+            if (count == 1)
+            {  
+                motor_forward(0,0);
+                IR_wait(); 
+                start = xTaskGetTickCount();
+                //print_mqtt("Zumo06/start", "%d ms", start);
+                //inital = start;         
+            }   
+            if(count == 2) 
+            { 
+                motor_forward(0,0);  
+                end = xTaskGetTickCount();
+                //print_mqtt("Zumo06/end", "%d ms", end);
+                int interval = end - start;
+                print_mqtt("Zumo06/lap", "The time interval is %d ms", interval); 
+                break;      
+            }
+
+            while(dig.R3 && dig.L3) { 
+                reflectance_digital(&dig);
+                motor_forward(50, 10);
+            }
+             
+        }          
+    }
+    while(true) 
+    { 
+        vTaskDelay(100);
+    }
+
+    
+}
+    
+    
 #endif
 
 

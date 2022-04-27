@@ -2,21 +2,18 @@
 #define ZUMO_CONFIG_H_
 
 /* Change the following definition to 0 to run in normal mode and to 1 to enable simulator mode  */
-<<<<<<< HEAD
+
 #define ZUMO_SIMULATOR 1    
-=======
-#define ZUMO_SIMULATOR 0   
->>>>>>> 1c4197663facd91886fd3a416461f34f022675cd
-    
+
 /* Change the following definition to 0 to disable MQTT and to 1 to enable MQTT  */
-#define START_MQTT 0
+#define START_MQTT 1
 
 /* The following definitions must all be in double quotes */
-#define NETWORK_SSID "MY_NETWORK"
+#define NETWORK_SSID "SmartIotMQTT"
 
-#define NETWORK_PASSWORD "password"
+#define NETWORK_PASSWORD "SmartIot"
 
-#define MQTT_BROKER "192.168.1.179"  
+#define MQTT_BROKER "192.168.1.254"  
     
 #define MQTT_CLIENT_ID "Zumo101"    
     
