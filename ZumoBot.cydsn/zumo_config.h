@@ -2,7 +2,11 @@
 #define ZUMO_CONFIG_H_
 
 /* Change the following definition to 0 to run in normal mode and to 1 to enable simulator mode  */
+<<<<<<< HEAD
 #define ZUMO_SIMULATOR 1    
+=======
+#define ZUMO_SIMULATOR 0   
+>>>>>>> 1c4197663facd91886fd3a416461f34f022675cd
     
 /* Change the following definition to 0 to disable MQTT and to 1 to enable MQTT  */
 #define START_MQTT 0

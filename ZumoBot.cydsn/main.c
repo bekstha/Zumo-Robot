@@ -590,6 +590,9 @@ void zmain(void)
 // Week 4 assignment 3
 #if 1
 //reflectance
+    void tank_left(uint8 l_speed, uint8 r_speed, uint32 delay);
+    
+    void tank_right(uint8 l_speed, uint8 r_speed, uint32 delay);
     
 void zmain(void)
 {
@@ -597,10 +600,12 @@ void zmain(void)
     struct sensors_ dig;
     IR_Start();
     
+
+    
     int delay=5;
     int speed=50;
-    int turnFactor = 4;
-    int sharpTurnFactor = 5;
+    int turnFactor = 2;
+    int sharpTurnFactor = 3;
     
     int maxcons = 20;
     int count = 0;
@@ -668,12 +673,35 @@ void zmain(void)
             b = 0;
             counter = 0;
             inersectionCounter++;
-            if (inersectionCounter==1||inersectionCounter==4){
+            if (inersectionCounter==1){
                 motor_forward(0,0);
                 IR_wait();  // wait for IR command
+            
+            }else if (inersectionCounter==2){
+                // Turn Left
+                // make a function to turn sharp left
+                motor_forward(0,0);
+                //Tank turn
+                
+                //SetMotors(1,0, speed, speed, delay*100);
+                tank_left(100, 100, 400);
+                
+                //vTaskDelay(5000);
+                
+                
+            }else if (inersectionCounter==3||inersectionCounter==4){
+                // Turn Right
+                // make a function to turn sharp right
+                motor_forward(0,0);
+                //Tank turn
+                
+                tank_right(100, 100, 400);
+                
+            } else{
+                motor_forward(0,0);                
+                motor_stop();
             }
 
-            
         }
         
         if(dig.L1==1 && dig.R1==1){
@@ -702,6 +730,15 @@ void zmain(void)
     }
 }
 
+void tank_left(uint8 l_speed, uint8 r_speed, uint32 delay)
+{
+    SetMotors(1,0, l_speed, r_speed, delay);
+}
+
+void tank_right(uint8 l_speed, uint8 r_speed, uint32 delay)
+{
+    SetMotors(0,1, l_speed, r_speed, delay);
+}
 
 
 #endif
