@@ -902,9 +902,9 @@ void zmain(void)
     
 #endif
 
-#if 1
+#if 0
     
-    //LINE FOLLOWER
+    //LINE FOLLOWER Bibek's master code
     
 void zmain(void){
     
@@ -912,7 +912,7 @@ void zmain(void){
     send_mqtt("Zumo06/debug", "Boot");
     
     struct sensors_ dig;
-    struct sensors_ ref;
+    //struct sensors_ ref;
     reflectance_set_threshold(15000, 14000, 13500, 13500, 14000, 15000);
     
     reflectance_start();
@@ -923,66 +923,92 @@ void zmain(void){
     BatteryLed_Write(1);
     while (SW1_Read()==1);
     BatteryLed_Write(0);
-    vTaskDelay(1000);
+    //vTaskDelay(1000);
     
     int intersection = 0;
     int count = 0;
     
     int start = 0, end = 0;
     
+    
     while(true){
     reflectance_digital(&dig);
-
+    
+    // to do once first intersection
+    if (dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 0) {
+    intersection = 1;
+    count++;
+    print_mqtt("Zumo06/","ready line");
+    motor_forward(0,0);
+    IR_wait();
+    start = xTaskGetTickCount();
+    motor_forward(130,100);
+    }
+    
+    // to do after second intersection
+    else if (dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 1){
+        intersection = 2;
+        count ++;
+        motor_forward(130,0);
+        //print_mqtt("Zumo06/","1st line");
+        //vTaskDelay(2000);
+    }
+    
+    // 
+    else if(dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 2){
+        intersection = 3;
+        count++;
+        motor_forward(180,0);
+        //print_mqtt("Zumo06/","2rd line stop and count is %d and intersection no is %d", count, intersection);
+        //vTaskDelay(500);
+    }
+    
+    // 
+    else if(dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 3){
+        motor_forward(0,0);
+        end = xTaskGetTickCount();
+        //print_mqtt("Zumo06/","3rd line stop and count is %d and intersection no is %d", count, intersection);
+        //vTaskDelay(1000);
+        break;
+    }
+    
+    
+    
+    // if centered go straight
     if (dig.L3 == 0 && dig.L2 == 0 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 0 && dig.R3 == 0) {
             motor_forward(130,0);    
     }
+    
+    // Turn right if L1 and L2 sensor are 0
     else if ( dig.L1 == 0 && dig.L2 == 0 ) {
-        motor_turn(255, 0, 0);
+        motor_turn(200, 0, 0);
     }
+    
+    // Turn left if R1 and R2 sensor are 0
     else if (dig.R1 == 0 && dig.R2 == 0 ){
-        motor_turn(0, 255, 0);
+        motor_turn(0, 200, 0);
     }
+    
+    // Turn hard Right if R2 and/or R3 sensor is 1
     else if ((dig.R2 == 1 && dig.R3 == 1)||(dig.R3 == 1)) {
-        motor_turn(200,0,0);
-    }
-    else if ((dig.L3 == 1) || (dig.L2 == 1)) {
-        motor_turn(0,200,0);
+        motor_turn(255,0,0);
     }
     
-            if (dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 0) {
-            intersection = 1;
-            count++;
-            print_mqtt("Zumo06/","ready line");
-            motor_forward(0,0);
-            IR_wait();
-            start = xTaskGetTickCount();
-        }
-        else if (dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 1){
-            intersection = 2;
-            count ++;
-            motor_forward(130,0);
-            print_mqtt("Zumo06/","1st line");
-            vTaskDelay(2000);
-        }
-        else if(dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 2){
-            intersection = 3;
-            count++;
-            motor_forward(180,0);
-            print_mqtt("Zumo06/","2rd line stop and count is %d and intersection no is %d", count, intersection);
-            vTaskDelay(500);
-        }
-        else if(dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 3){
-            motor_forward(0,0);
-            end = xTaskGetTickCount();
-            print_mqtt("Zumo06/","3rd line stop and count is %d and intersection no is %d", count, intersection);
-            vTaskDelay(1000);
-            break;
-        }
-    
+    // Turn hard left if L2 and/or R3 sensor is 1
+    else if ((dig.L2 == 1 && dig.L3 == 1)||(dig.L3 == 1)) {
+        motor_turn(0,255,0);
     }
+    
+    
+    
+
+    }
+    // end of while loop
+    
     motor_stop();
     int timeTaken = end - start;
     print_mqtt("Zumo06/", "The time taken to finish the track was %d ms", timeTaken);
+
 }
     
    
@@ -1150,5 +1176,144 @@ void zmain(void)
     }
  }   
 #endif
+
+
+
+
+// Line follower project group 6 Code
+
+#if 1
+
+    
+void zmain(void)
+{
+    int codeStart;
+    codeStart= xTaskGetTickCount();
+    
+    int start=0, stop=0;
+
+    
+    //struct sensors_ ref;
+    struct sensors_ dig;
+    IR_Start();
+    
+
+    
+    
+    int delay=0;
+    int speed=160;
+    int turnSpeed = 200;
+    int turnSharpSpeed = 255;
+    
+    int maxcons = 10;
+    int count = 0;
+    int a = -1;
+    int b = 0;
+    int counter = 0;
+    int inersectionCounter=0;
+    
+    
+    motor_start();
+    motor_forward(0,0);
+    
+    reflectance_start();
+    reflectance_set_threshold(15000, 14000, 13500, 13500, 14000, 15000);
+    
+    // waiting for user to press the switch button and lift from the button
+    while(SW1_Read() == 1) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(10);
+    
+    // check if the vehicle is centered.
+    do{
+        reflectance_digital(&dig);
+    } 
+    while(dig.L1==0 || dig.R1==0);
+
+    
+    while(true)
+    {
+        
+        reflectance_digital(&dig); 
+        
+
+        if(dig.L3==0 && dig.R3==0){
+            if(count > 0){
+                count -= 1;
+            } else{
+                a = b+1;
+                counter = a;
+            }
+        } else if (dig.L3==1 && dig.R3==1){
+            if (count <= maxcons){
+                count += 1;
+            }else{
+                b = a+1;
+                counter = b;
+            }
+        }
+
+        
+        if(counter==2){
+            count = 0;
+            a = -1;
+            b = 0;
+            counter = 0;
+            inersectionCounter++;
+            if (inersectionCounter==1){
+                motor_forward(0,0);
+                print_mqtt("Zumo06/", "ready line");
+                BatteryLed_Write(1);
+                IR_wait();  // wait for IR command
+                BatteryLed_Write(0);
+                start = xTaskGetTickCount();
+                print_mqtt("Zumo06/", "start: %d",start-codeStart);
+                
+            }else if (inersectionCounter==2){
+                motor_forward(speed,delay);
+                
+            } else{
+                motor_forward(0,0);                
+                motor_stop();
+                stop = xTaskGetTickCount();
+                print_mqtt("Zumo06/", "stop: %d",stop);
+                print_mqtt("Zumo06/", "time: %d",stop-start);
+            }
+
+        }
+        // go straight
+        if(dig.L1==1 && dig.R1==1){
+            motor_forward(speed,delay);
+        } 
+        
+        // slow turn left
+        else if(dig.L2==1 && dig.L1==1){
+            motor_turn(0,turnSpeed,delay);
+        } 
+        
+        // slow turn right
+        else if(dig.R1==1 && dig.R2==1){
+            motor_turn(turnSpeed,0,delay);
+        } 
+        
+        // sharp turn left
+        else if(dig.L3==1 && dig.L2==1){
+            motor_turn(0,turnSharpSpeed,delay);
+        }
+        
+        // sharp turn right
+        else if(dig.R2==1 && dig.R3==1){
+            motor_turn(turnSharpSpeed,0,delay);
+        }
+
+        //vTaskDelay(10);
+
+    }
+}
+
+
+#endif
+
+
+
 
 /* [] END OF FILE */
