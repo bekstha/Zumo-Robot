@@ -834,7 +834,7 @@ void zmain(void)
 #endif
 
 
-#if 1
+#if 0
     
 // Week 5 Assignment 3
 void zmain(void)
@@ -899,6 +899,93 @@ void zmain(void)
     
 }
     
+    
+#endif
+
+#if 1
+    
+    //LINE FOLLOWER
+    
+void zmain(void){
+    
+    
+    send_mqtt("Zumo06/debug", "Boot");
+    
+    struct sensors_ dig;
+    struct sensors_ ref;
+    reflectance_set_threshold(15000, 14000, 13500, 13500, 14000, 15000);
+    
+    reflectance_start();
+    IR_Start();
+    motor_start();
+    motor_forward(0,0);
+    
+    BatteryLed_Write(1);
+    while (SW1_Read()==1);
+    BatteryLed_Write(0);
+    vTaskDelay(1000);
+    
+    int intersection = 0;
+    int count = 0;
+    
+    int start = 0, end = 0;
+    
+    while(true){
+    reflectance_digital(&dig);
+
+    if (dig.L3 == 0 && dig.L2 == 0 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 0 && dig.R3 == 0) {
+            motor_forward(130,0);    
+    }
+    else if ( dig.L1 == 0 && dig.L2 == 0 ) {
+        motor_turn(255, 0, 0);
+    }
+    else if (dig.R1 == 0 && dig.R2 == 0 ){
+        motor_turn(0, 255, 0);
+    }
+    else if ((dig.R2 == 1 && dig.R3 == 1)||(dig.R3 == 1)) {
+        motor_turn(200,0,0);
+    }
+    else if ((dig.L3 == 1) || (dig.L2 == 1)) {
+        motor_turn(0,200,0);
+    }
+    
+            if (dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 0) {
+            intersection = 1;
+            count++;
+            print_mqtt("Zumo06/","ready line");
+            motor_forward(0,0);
+            IR_wait();
+            start = xTaskGetTickCount();
+        }
+        else if (dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 1){
+            intersection = 2;
+            count ++;
+            motor_forward(130,0);
+            print_mqtt("Zumo06/","1st line");
+            vTaskDelay(2000);
+        }
+        else if(dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 2){
+            intersection = 3;
+            count++;
+            motor_forward(180,0);
+            print_mqtt("Zumo06/","2rd line stop and count is %d and intersection no is %d", count, intersection);
+            vTaskDelay(500);
+        }
+        else if(dig.L3 == 1 && dig.L2 == 1 && dig.L1 == 1 && dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1 && intersection == 3){
+            motor_forward(0,0);
+            end = xTaskGetTickCount();
+            print_mqtt("Zumo06/","3rd line stop and count is %d and intersection no is %d", count, intersection);
+            vTaskDelay(1000);
+            break;
+        }
+    
+    }
+    motor_stop();
+    int timeTaken = end - start;
+    print_mqtt("Zumo06/", "The time taken to finish the track was %d ms", timeTaken);
+}
+    
+   
     
 #endif
 
