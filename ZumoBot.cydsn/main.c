@@ -1192,18 +1192,17 @@ void zmain(void)
     
     int start=0, stop=0;
 
-    
     //struct sensors_ ref;
     struct sensors_ dig;
     IR_Start();
     
-
-    
-    
+    // Internal Variables
     int delay=0;
-    int speed=160;
+    int speed=200;
     int turnSpeed = 200;
+    int turnMinSpeed = 30;
     int turnSharpSpeed = 255;
+    int turnMinSharpSpeed = 30;
     
     int maxcons = 10;
     int count = 0;
@@ -1277,9 +1276,11 @@ void zmain(void)
                 stop = xTaskGetTickCount();
                 print_mqtt("Zumo06/", "stop: %d",stop);
                 print_mqtt("Zumo06/", "time: %d",stop-start);
+                break;
             }
 
         }
+        
         // go straight
         if(dig.L1==1 && dig.R1==1){
             motor_forward(speed,delay);
@@ -1287,22 +1288,22 @@ void zmain(void)
         
         // slow turn left
         else if(dig.L2==1 && dig.L1==1){
-            motor_turn(0,turnSpeed,delay);
+            motor_turn(turnMinSpeed,turnSpeed,delay);
         } 
         
         // slow turn right
         else if(dig.R1==1 && dig.R2==1){
-            motor_turn(turnSpeed,0,delay);
+            motor_turn(turnSpeed,turnMinSpeed,delay);
         } 
         
         // sharp turn left
         else if(dig.L3==1 && dig.L2==1){
-            motor_turn(0,turnSharpSpeed,delay);
+            motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
         }
         
         // sharp turn right
         else if(dig.R2==1 && dig.R3==1){
-            motor_turn(turnSharpSpeed,0,delay);
+            motor_turn(turnSharpSpeed,turnMinSharpSpeed,delay);
         }
 
         //vTaskDelay(10);
