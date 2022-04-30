@@ -1182,7 +1182,7 @@ void zmain(void)
 
 // Line follower project group 6 Code
 
-#if 1
+#if 0
 
     
 void zmain(void)
@@ -1191,6 +1191,7 @@ void zmain(void)
     codeStart= xTaskGetTickCount();
     
     int start=0, stop=0;
+    int line=0, miss=0;
 
     //struct sensors_ ref;
     struct sensors_ dig;
@@ -1199,7 +1200,7 @@ void zmain(void)
     // Internal Variables
     int delay=0;
     int speed=200;
-    int turnSpeed = 200;
+    int turnSpeed = 230;
     int turnMinSpeed = 30;
     int turnSharpSpeed = 255;
     int turnMinSharpSpeed = 30;
@@ -1266,6 +1267,7 @@ void zmain(void)
                 BatteryLed_Write(0);
                 start = xTaskGetTickCount();
                 print_mqtt("Zumo06/", "start: %d",start-codeStart);
+                line=1;
                 
             }else if (inersectionCounter==2){
                 motor_forward(speed,delay);
@@ -1284,35 +1286,251 @@ void zmain(void)
         // go straight
         if(dig.L1==1 && dig.R1==1){
             motor_forward(speed,delay);
+            
+            // print line once it turns back from miss
+            
+            if (miss==1){
+                print_mqtt("Zumo06/", "line");
+                miss=0;
+                line=1;}
+            
         } 
         
         // slow turn left
         else if(dig.L2==1 && dig.L1==1){
             motor_turn(turnMinSpeed,turnSpeed,delay);
+            
+            // print miss once it deviate from line
+            
+            if  (line==1){
+            print_mqtt("Zumo06/", "miss");
+            miss=1;
+            line=0;}
+            
         } 
         
         // slow turn right
         else if(dig.R1==1 && dig.R2==1){
             motor_turn(turnSpeed,turnMinSpeed,delay);
+            
+            // print miss once it deviate from line
+            
+            if  (line==1){
+            print_mqtt("Zumo06/", "miss");
+            miss=1;
+            line=0;}
+            
         } 
         
         // sharp turn left
         else if(dig.L3==1 && dig.L2==1){
             motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
+            
+            // print miss once it deviate from line
+            
+            if  (line==1){
+            print_mqtt("Zumo06/", "miss");
+            miss=1;
+            line=0;}
+            
         }
         
         // sharp turn right
         else if(dig.R2==1 && dig.R3==1){
             motor_turn(turnSharpSpeed,turnMinSharpSpeed,delay);
+            
+            // print miss once it deviate from line
+            
+            if  (line==1){
+            print_mqtt("Zumo06/", "miss");
+            miss=1;
+            line=0;
+            }
+            
         }
-
-        //vTaskDelay(10);
-
     }
 }
 
 
 #endif
+
+
+// Maze runner project group 6 Code
+
+#if 1
+
+    // Initializing tank turn
+    void tank_left(uint8 l_speed, uint8 r_speed, uint32 delay);
+    void tank_right(uint8 l_speed, uint8 r_speed, uint32 delay);
+    
+void zmain(void)
+{
+    struct sensors_ ref;
+    struct sensors_ dig;
+    IR_Start();
+    
+    int delay=5;
+    int speed=50;
+    int turnFactor = 2;
+    int sharpTurnFactor = 3;
+    
+    int maxcons = 20;
+    int count = 0;
+    int a = -1;
+    int b = 0;
+    int counter = 0;
+    int inersectionCounter=0;
+    
+    
+    motor_start();
+    motor_forward(0,0);
+    
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
+    
+    while(true){
+     // read raw sensor values
+        reflectance_read(&ref);
+        // print out each period of reflectance sensors
+        printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
+        
+
+        // read digital values that are based on threshold. 0 = white, 1 = black
+        // when blackness value is over threshold the sensors reads 1, otherwise 0
+        reflectance_digital(&dig); 
+        //print out 0 or 1 according to results of reflectance period
+        printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);
+        vTaskDelay(5000);
+    }
+    
+    
+    /*
+    
+    // waiting for user to press the switch button and lift from the button
+    while(SW1_Read() == 1) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(10);
+    
+    
+    // check if the vehicle is centered.
+    do{
+        reflectance_digital(&dig);
+    } 
+    while(dig.L1==0 || dig.R1==0);
+
+    
+    while(true)
+    {
+        
+        // read raw sensor values
+        reflectance_read(&ref);
+        // print out each period of reflectance sensors
+        printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
+        
+
+        // read digital values that are based on threshold. 0 = white, 1 = black
+        // when blackness value is over threshold the sensors reads 1, otherwise 0
+        reflectance_digital(&dig); 
+        //print out 0 or 1 according to results of reflectance period
+        //printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);        
+        
+
+        if(dig.L3==0 && dig.R3==0){
+            if(count > 0){
+                count -= 1;
+            } else{
+                a = b+1;
+                counter = a;
+            }
+        } else if (dig.L3==1 && dig.R3==1){
+            if (count <= maxcons){
+                count += 1;
+            }else{
+                b = a+1;
+                counter = b;
+            }
+        }
+        
+        
+
+        
+        if(counter==2){
+            count = 0;
+            a = -1;
+            b = 0;
+            counter = 0;
+            inersectionCounter++;
+            if (inersectionCounter==1){
+                motor_forward(0,0);
+                IR_wait();  // wait for IR command
+            
+            }else if (inersectionCounter==2){
+                // Turn Left
+                // make a function to turn sharp left
+                motor_forward(0,0);
+                //Tank turn
+                
+                //SetMotors(1,0, speed, speed, delay*100);
+                tank_left(100, 100, 400);
+                
+                //vTaskDelay(5000);
+                
+                
+            }else if (inersectionCounter==3||inersectionCounter==4){
+                // Turn Right
+                // make a function to turn sharp right
+                motor_forward(0,0);
+                //Tank turn
+                
+                tank_right(100, 100, 400);
+                
+            } else{
+                motor_forward(0,0);                
+                motor_stop();
+            }
+
+        }
+        
+        if(dig.L1==1 && dig.R1==1){
+            motor_forward(speed,delay);
+            
+        } else if(dig.L2==1 && dig.L1==1){
+            motor_turn(speed/turnFactor,turnFactor*speed,delay);
+            
+        } else if(dig.R1==1 && dig.R2==1){
+            motor_turn(turnFactor*speed,speed/turnFactor,delay);
+            
+        } else if(dig.L3==1 && dig.L2==1){
+            motor_turn(speed/sharpTurnFactor,sharpTurnFactor*speed,delay);
+            
+        }else if(dig.R2==1 && dig.R3==1){
+            motor_turn(sharpTurnFactor*speed,speed/sharpTurnFactor,delay);
+            
+        }
+
+        
+        
+        
+        
+        //vTaskDelay(10);
+
+    }*/
+}
+
+void tank_left(uint8 l_speed, uint8 r_speed, uint32 delay)
+{
+    SetMotors(1,0, l_speed, r_speed, delay);
+}
+
+void tank_right(uint8 l_speed, uint8 r_speed, uint32 delay)
+{
+    SetMotors(0,1, l_speed, r_speed, delay);
+}
+
+    
+# endif
+
+
+
 
 
 
