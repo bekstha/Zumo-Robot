@@ -1360,21 +1360,30 @@ void zmain(void)
 #if 1
 
     // Initializing tank turn
-    void tank_left(uint8 l_speed, uint8 r_speed, uint32 delay);
-    void tank_right(uint8 l_speed, uint8 r_speed, uint32 delay);
+    void tank_left(uint8 l_speed, uint32 delay);
+    void tank_right(uint8 r_speed, uint32 delay);
     
 void zmain(void)
 {
-    struct sensors_ ref;
+    //struct sensors_ ref;
     struct sensors_ dig;
     IR_Start();
     
-    int delay=5;
-    int speed=50;
-    int turnFactor = 2;
-    int sharpTurnFactor = 3;
+    int start=0, end=0;
     
-    int maxcons = 20;
+    
+    int delay=0;
+    int speed=100;
+    int turnSpeed = 230;
+    int turnMinSpeed = 30;
+    int turnSharpSpeed = 255;
+    int turnMinSharpSpeed = 30;
+    
+    int halfDist=22000;
+    int halfAngle=26250;
+
+
+    int maxcons = 1;
     int count = 0;
     int a = -1;
     int b = 0;
@@ -1386,29 +1395,29 @@ void zmain(void)
     motor_forward(0,0);
     
     reflectance_start();
-    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
-    
-    while(true){
-     // read raw sensor values
-        reflectance_read(&ref);
-        // print out each period of reflectance sensors
-        printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
-        
-
-        // read digital values that are based on threshold. 0 = white, 1 = black
-        // when blackness value is over threshold the sensors reads 1, otherwise 0
-        reflectance_digital(&dig); 
-        //print out 0 or 1 according to results of reflectance period
-        printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);
-        vTaskDelay(5000);
-    }
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); 
     
     
     /*
+    while(true){
+        reflectance_read(&ref);
+        printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
+        
+        reflectance_digital(&dig); 
+        printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);
+        vTaskDelay(5000);
+    }*/
+    
+    
+    
     
     // waiting for user to press the switch button and lift from the button
+    /*
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(10);
+    */
+    IR_wait();
+    start = xTaskGetTickCount();
     
     
     // check if the vehicle is centered.
@@ -1420,19 +1429,9 @@ void zmain(void)
     
     while(true)
     {
-        
-        // read raw sensor values
-        reflectance_read(&ref);
-        // print out each period of reflectance sensors
-        printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
-        
-
-        // read digital values that are based on threshold. 0 = white, 1 = black
-        // when blackness value is over threshold the sensors reads 1, otherwise 0
         reflectance_digital(&dig); 
-        //print out 0 or 1 according to results of reflectance period
-        //printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);        
-        
+    
+        // it filters noise in 00 and 11 in center sensors and count when center flips from 0 to 1
 
         if(dig.L3==0 && dig.R3==0){
             if(count > 0){
@@ -1459,52 +1458,50 @@ void zmain(void)
             b = 0;
             counter = 0;
             inersectionCounter++;
+            
+            // first intersection wait for IR command
             if (inersectionCounter==1){
                 motor_forward(0,0);
+                end = xTaskGetTickCount();
+                printf("time: %d\n",end-start);
                 IR_wait();  // wait for IR command
+                
+            }
             
-            }else if (inersectionCounter==2){
-                // Turn Left
-                // make a function to turn sharp left
+            // second intersection
+            else if (inersectionCounter==2){
+                // Tank turn
+                motor_forward(speed, halfDist/speed);
+                tank_left(speed, halfAngle/speed);
                 motor_forward(0,0);
-                //Tank turn
-                
-                //SetMotors(1,0, speed, speed, delay*100);
-                tank_left(100, 100, 400);
-                
-                //vTaskDelay(5000);
-                
-                
-            }else if (inersectionCounter==3||inersectionCounter==4){
-                // Turn Right
-                // make a function to turn sharp right
-                motor_forward(0,0);
-                //Tank turn
-                
-                tank_right(100, 100, 400);
-                
-            } else{
-                motor_forward(0,0);                
                 motor_stop();
             }
-
         }
+        
+        
         
         if(dig.L1==1 && dig.R1==1){
             motor_forward(speed,delay);
-            
-        } else if(dig.L2==1 && dig.L1==1){
-            motor_turn(speed/turnFactor,turnFactor*speed,delay);
-            
-        } else if(dig.R1==1 && dig.R2==1){
-            motor_turn(turnFactor*speed,speed/turnFactor,delay);
-            
-        } else if(dig.L3==1 && dig.L2==1){
-            motor_turn(speed/sharpTurnFactor,sharpTurnFactor*speed,delay);
-            
-        }else if(dig.R2==1 && dig.R3==1){
-            motor_turn(sharpTurnFactor*speed,speed/sharpTurnFactor,delay);
-            
+        } 
+        
+        // Turn left
+        else if(dig.L2==1 && dig.L1==1){
+            motor_turn(turnMinSpeed,turnSpeed,delay);
+        }
+        
+        // Turn right
+        else if(dig.R1==1 && dig.R2==1){
+            motor_turn(turnSpeed,turnMinSpeed, delay);
+        } 
+        
+        // Turn sharp left
+        else if(dig.L3==1 && dig.L2==1){
+            motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
+        }
+        
+        // Turn sharp right
+        else if(dig.R2==1 && dig.R3==1){
+            motor_turn(turnSharpSpeed, turnMinSharpSpeed, delay);
         }
 
         
@@ -1513,17 +1510,17 @@ void zmain(void)
         
         //vTaskDelay(10);
 
-    }*/
+    }
 }
 
-void tank_left(uint8 l_speed, uint8 r_speed, uint32 delay)
+void tank_left(uint8 l_speed, uint32 delay)
 {
-    SetMotors(1,0, l_speed, r_speed, delay);
+    SetMotors(1,0, l_speed, l_speed, delay);
 }
 
-void tank_right(uint8 l_speed, uint8 r_speed, uint32 delay)
+void tank_right(uint8 r_speed, uint32 delay)
 {
-    SetMotors(0,1, l_speed, r_speed, delay);
+    SetMotors(0,1, r_speed, r_speed, delay);
 }
 
     
