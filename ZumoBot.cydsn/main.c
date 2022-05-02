@@ -1182,7 +1182,7 @@ void zmain(void)
 
 // Line follower project group 6 Code
 
-#if 1
+#if 0
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 delay);
@@ -1560,7 +1560,9 @@ void tank_right(uint8 r_speed, uint32 delay)
 
 
 
-#if 1
+// Sumo wrestling Group 6 Code Rough
+
+#if 0
     
 void check_obstacle(struct sensors_ *);
 void wait_button(void);
@@ -1702,6 +1704,118 @@ void check_obstacle(struct sensors_ *dig){
 }
 /* [] END OF FILE */
 #endif
+
+
+// Sumo wrestling group 6 Code
+
+
+#if 1
+
+    // Initializing tank turn
+    void tank_left(uint8 l_speed, uint32 delay);
+    void tank_right(uint8 r_speed, uint32 delay);
+    
+void zmain(void)
+{
+    //struct sensors_ ref;
+    struct sensors_ dig;
+    IR_Start();
+    
+    
+    
+    int delay=0;
+    int speed=255;
+    int slowSpeed = 100;
+    int turnSpeed = 255;
+    //int turnMinSpeed = 0;
+    //int turnSharpSpeed = 255;
+    //int turnMinSharpSpeed = 0;
+    
+    //int halfDist=22000;
+    //int halfAngle=26250;
+
+
+    //int maxcons = 10;
+    //int count = 0;
+    //int a = -1;
+    //int b = 0;
+    //int counter = 0;
+    int inersectionCounter=0;
+    
+    
+    motor_start();
+    motor_forward(0,0);
+    
+    reflectance_start();
+    reflectance_set_threshold(15000, 14000, 13500, 13500, 14000, 15000); 
+    
+    
+    // waiting for user to press the switch button and lift from the button
+    
+    while(SW1_Read() == 1) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(1000);
+    
+    
+    
+    // check if the vehicle is centered.
+    do{
+        reflectance_digital(&dig);
+    } 
+    while(dig.L1==0 || dig.R1==0);
+    
+    
+    while(inersectionCounter==0){
+        reflectance_digital(&dig); 
+        
+        motor_forward(slowSpeed,delay);
+        if(dig.L3==1 && dig.R3==1 ){
+            motor_forward(0,0);
+            IR_wait();
+            inersectionCounter++;
+            motor_forward(speed,500);
+        }
+    }
+    
+    while(true)
+    {
+        motor_forward(speed,delay);
+        
+        reflectance_digital(&dig); 
+
+
+        
+        // Reverse and tank turn right
+        if(dig.L3==1 || dig.L2==1 || dig.L1==1){
+            motor_backward(speed,500);
+            tank_left(turnSpeed,500);
+        }
+        
+        // Reverse and tank turn left
+        else if(dig.R3==1 || dig.R2==1 || dig.R1==1){
+            motor_backward(speed,500);
+            tank_right(turnSpeed,500);
+        } 
+        
+
+
+    }
+}
+
+void tank_left(uint8 l_speed, uint32 delay)
+{
+    SetMotors(1,0, l_speed, l_speed, delay);
+}
+
+void tank_right(uint8 r_speed, uint32 delay)
+{
+    SetMotors(0,1, r_speed, r_speed, delay);
+}
+
+    
+# endif
+
+
+
 
 
 
