@@ -1717,45 +1717,31 @@ void check_obstacle(struct sensors_ *dig){
     
 void zmain(void)
 {
-    //struct sensors_ ref;
+
     struct sensors_ dig;
     IR_Start();
-    
-    
-    
-    int delay=0;
-    int speed=255;
+
     int slowSpeed = 100;
-    int turnSpeed = 255;
-    //int turnMinSpeed = 0;
-    //int turnSharpSpeed = 255;
-    //int turnMinSharpSpeed = 0;
-    
-    //int halfDist=22000;
-    //int halfAngle=26250;
-
-
-    //int maxcons = 10;
-    //int count = 0;
-    //int a = -1;
-    //int b = 0;
-    //int counter = 0;
+    int delay=0;
+    int speed=210;
+    int backTime = 300;
     int inersectionCounter=0;
     
+    int seed = xTaskGetTickCount();
+    srand(seed);
     
     motor_start();
     motor_forward(0,0);
     
     reflectance_start();
-    reflectance_set_threshold(15000, 14000, 13500, 13500, 14000, 15000); 
+    reflectance_set_threshold(15000, 14000, 14000, 14000, 14000, 15000); 
     
     
     // waiting for user to press the switch button and lift from the button
     
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(1000);
-    
-    
+
     
     // check if the vehicle is centered.
     do{
@@ -1776,24 +1762,33 @@ void zmain(void)
         }
     }
     
+    /*
+    while(true){
+        tank_left(speed,5000);
+        motor_stop();
+    }
+    */
+    
+    
     while(true)
     {
+        int r = rand() % 6;
+        
         motor_forward(speed,delay);
         
         reflectance_digital(&dig); 
 
-
         
         // Reverse and tank turn right
         if(dig.L3==1 || dig.L2==1 || dig.L1==1){
-            motor_backward(speed,500);
-            tank_left(turnSpeed,500);
+            motor_backward(speed,backTime);
+            tank_right(speed,50000/speed + r*50000/speed/10);
         }
         
         // Reverse and tank turn left
         else if(dig.R3==1 || dig.R2==1 || dig.R1==1){
-            motor_backward(speed,500);
-            tank_right(turnSpeed,500);
+            motor_backward(speed,backTime);
+            tank_left(speed,50000/speed + r*50000/speed/10);
         } 
         
 
