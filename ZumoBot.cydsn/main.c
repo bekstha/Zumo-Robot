@@ -1182,16 +1182,20 @@ void zmain(void)
 
 // Line follower project group 6 Code
 
-#if 0
+#if 1
 
+    // Initializing tank turn
+    void tank_left(uint8 l_speed, uint32 delay);
+    void tank_right(uint8 r_speed, uint32 delay);
     
+
 void zmain(void)
 {
     int codeStart;
     codeStart= xTaskGetTickCount();
     
     int start=0, stop=0;
-    int line=0, miss=0;
+    // int line=0, miss=0;
 
     //struct sensors_ ref;
     struct sensors_ dig;
@@ -1199,13 +1203,15 @@ void zmain(void)
     
     // Internal Variables
     int delay=0;
-    int speed=200;
+    int slowSpeed = 160;
+    int speed=230;
+    int tankTurnSpeed = 230;
     int turnSpeed = 230;
-    int turnMinSpeed = 30;
-    int turnSharpSpeed = 255;
-    int turnMinSharpSpeed = 30;
+    int turnMinSpeed = 0;
+    // int turnSharpSpeed = 255;
+    // int turnMinSharpSpeed = 0;
     
-    int maxcons = 10;
+    int maxcons = 2;
     int count = 0;
     int a = -1;
     int b = 0;
@@ -1221,14 +1227,14 @@ void zmain(void)
     
     // waiting for user to press the switch button and lift from the button
     while(SW1_Read() == 1) vTaskDelay(10);
-    while(SW1_Read() == 0) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(1000);
     
     // check if the vehicle is centered.
     do{
         reflectance_digital(&dig);
     } 
     while(dig.L1==0 || dig.R1==0);
-
+    
     
     while(true)
     {
@@ -1267,7 +1273,8 @@ void zmain(void)
                 BatteryLed_Write(0);
                 start = xTaskGetTickCount();
                 print_mqtt("Zumo06/", "start: %d",start-codeStart);
-                line=1;
+                //line=1;
+                motor_forward(160,200);
                 
             }else if (inersectionCounter==2){
                 motor_forward(speed,delay);
@@ -1283,17 +1290,31 @@ void zmain(void)
 
         }
         
-        // go straight
-        if(dig.L1==1 && dig.R1==1){
-            motor_forward(speed,delay);
+        // go straight before first intersection line
+        if(dig.L1==1 && dig.R1==1 && inersectionCounter<1){
+            motor_forward(slowSpeed,delay);
             
             // print line once it turns back from miss
-            
+            /*
             if (miss==1){
                 print_mqtt("Zumo06/", "line");
                 miss=0;
                 line=1;}
+            */
+        } 
+        
+        
+        // go straight after first intersection line
+        else if(dig.L1==1 && dig.R1==1 && inersectionCounter>=1){
+            motor_forward(speed,delay);
             
+            // print line once it turns back from miss
+            /*
+            if (miss==1){
+                print_mqtt("Zumo06/", "line");
+                miss=0;
+                line=1;}
+            */
         } 
         
         // slow turn left
@@ -1301,12 +1322,12 @@ void zmain(void)
             motor_turn(turnMinSpeed,turnSpeed,delay);
             
             // print miss once it deviate from line
-            
+            /*
             if  (line==1){
             print_mqtt("Zumo06/", "miss");
             miss=1;
             line=0;}
-            
+            */
         } 
         
         // slow turn right
@@ -1314,41 +1335,52 @@ void zmain(void)
             motor_turn(turnSpeed,turnMinSpeed,delay);
             
             // print miss once it deviate from line
-            
+            /*
             if  (line==1){
             print_mqtt("Zumo06/", "miss");
             miss=1;
             line=0;}
-            
+            */
         } 
         
         // sharp turn left
         else if(dig.L3==1 && dig.L2==1){
-            motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
+            // motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
+            tank_left(tankTurnSpeed,delay);
             
             // print miss once it deviate from line
-            
+            /*
             if  (line==1){
             print_mqtt("Zumo06/", "miss");
             miss=1;
             line=0;}
-            
+            */
         }
         
         // sharp turn right
         else if(dig.R2==1 && dig.R3==1){
-            motor_turn(turnSharpSpeed,turnMinSharpSpeed,delay);
-            
+            // motor_turn(turnSharpSpeed,turnMinSharpSpeed,delay);
+            tank_right(tankTurnSpeed,delay);
             // print miss once it deviate from line
-            
+            /*
             if  (line==1){
             print_mqtt("Zumo06/", "miss");
             miss=1;
-            line=0;
-            }
-            
+            line=0;}
+            */
         }
     }
+}
+
+
+void tank_left(uint8 l_speed, uint32 delay)
+{
+    SetMotors(1,0, l_speed, l_speed, delay);
+}
+
+void tank_right(uint8 r_speed, uint32 delay)
+{
+    SetMotors(0,1, r_speed, r_speed, delay);
 }
 
 
@@ -1357,7 +1389,7 @@ void zmain(void)
 
 // Maze runner project group 6 Code
 
-#if 1
+#if 0
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 delay);
