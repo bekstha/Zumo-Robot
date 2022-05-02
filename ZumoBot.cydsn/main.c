@@ -1560,6 +1560,148 @@ void tank_right(uint8 r_speed, uint32 delay)
 
 
 
+#if 1
+    
+void check_obstacle(struct sensors_ *);
+void wait_button(void);
+void tank_turn(float);
+void wait_end_line(struct sensors_);
+void wait_until_line(struct sensors_);
+void move_next_line(uint8, struct sensors_);
+
+
+
+/**
+* @brief    Clockwise tank turn
+* @details  sets motors to opposite speeds to perform rank turn
+* @param    float turns : multiple of 90 degrees to turn
+*/
+void tank_turn(float turns)
+{
+    // Hardcoded values here are calibrated from manual testing
+    uint8 speed = 200;
+    // Delay unit is the time needed to turn 90 degrees * the absolute value of turns
+    uint32 delay_unit = round(131 * fabsf(turns));
+    if(turns > 0) {
+        SetMotors(0, 1, speed, speed, delay_unit);
+    } else if(turns < 0) {
+        SetMotors(1, 0, speed, speed, delay_unit);
+    }
+    SetMotors(0, 0, 0, 0, 0);
+}
+
+/*
+*@brief    waits for button press event
+*/
+void wait_button(void){
+    BatteryLed_Write(1);
+    while(SW1_Read());
+    BatteryLed_Write(0);
+}
+
+/**
+* @brief    Blocks until the robot is over the line
+* @details  Loops over all the sensors until any one of them is no longer black
+* @param    struct _sensors dig : struct with digital sensor data
+*/
+void wait_end_line(struct sensors_ dig)
+{
+    do {
+        reflectance_digital(&dig);
+    } while (dig.L1 == 1 && dig.L2 == 1 && dig.L3 == 1 &&
+        dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1);
+}
+
+/**
+* @brief    Blocks until the robot is over a line
+* @details  Loops over all the sensors until any one of them is no longer black
+* @param    struct _sensors dig : struct with digital sensor data
+*/
+void wait_until_line(struct sensors_ dig)
+{
+    while(true)
+    {
+        reflectance_digital(&dig);
+        if(dig.L1 == 1 && dig.L2 == 1 && dig.L3 == 1 &&
+            dig.R1 == 1 && dig.R2 == 1 && dig.R3 == 1)
+        {
+            break;
+        }
+    }
+}
+
+/**
+* @brief    Blocks until end of next line
+* @details  Uses the two wait_*_line functions to move the robot to the end of the next line
+* @param    uint8 speed : the movement speed of the robot
+* @param    struct _sensors dig : struct with digital sensor data
+*/
+void move_next_line(uint8 speed, struct sensors_ dig) {
+    motor_forward(speed, 0);
+    wait_until_line(dig);
+    wait_end_line(dig);
+    motor_forward(0, 0);
+}
+
+
+void zmain(void){
+    // Robot angle on the track 135
+    TickType_t start_time = 0;
+    TickType_t stop_time = 0;
+    struct sensors_ dig;
+    
+    // Initialisation
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000);
+    Ultra_Start();
+    IR_Start();
+    motor_start();
+    motor_forward(0,0);
+    
+    // Robot drives until it reaches the edge of the ring
+    move_next_line(100, dig);
+    print_mqtt("/ready", "zumo");
+    // print_mqtt(TOPIC,SUBTOPIC_ready" zumo");
+    
+    // Robot waits for IR remote signal
+    IR_wait();
+    start_time = xTaskGetTickCount(); // Stores starting time of robot
+    print_mqtt("/start", "%i", time); // Prints starting time after getting IR remote signal
+    
+    // Robot enters the ring and drives until user button is pressed
+    // This first one needs a delay to get the reflectance sensors over the line
+    motor_forward(100,100);
+    do {
+        reflectance_digital(&dig);
+        check_obstacle(&dig);
+    } while(SW1_Read()); //when user button is pressed loop ends and robot stops
+    
+    stop_time = xTaskGetTickCount(); // Stores stopping time after user button is pressed
+    print_mqtt("/stop", "%i", stop_time); // Prints robot stopping time
+    print_mqtt("/time", "%i", (stop_time - start_time)); // Prints difference of starting time and stopping time
+    motor_forward(0,0);
+    motor_stop();
+}
+
+// Function checks for obstacles
+void check_obstacle(struct sensors_ *dig){
+    int distance = Ultra_GetDistance();
+    // Condition to check obstacle or edge
+    if(distance < 10 || (dig->L3 == 1 || dig->R3 == 1))
+    {
+        print_mqtt("/obstacle", "%i", xTaskGetTickCount());
+        // Turns in random direction when obstacle is found
+        // float random_turn = (float)rand()/(float)(RAND_MAX/2) + 1;
+        //tank_turn(random_turn);
+        // Reset forward motion after turn
+        //motor_forward(50 ,0);
+        motor_backward(150,100);
+        motor_turn(250,0,200);
+        motor_forward(100,100);
+    }
+}
+/* [] END OF FILE */
+#endif
 
 
 
