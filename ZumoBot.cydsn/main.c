@@ -1390,38 +1390,43 @@ void tank_right(uint8 r_speed, uint32 delay)
 
 // Maze runner project group 6 Code
 
-#if 0
+#if 1
 
     // Initializing tank turn
-    void tank_left(uint8 l_speed, uint32 delay);
-    void tank_right(uint8 r_speed, uint32 delay);
+    void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay);
+    void tank_right(uint8 r_speed, uint32 distDelay, uint32 angleDelay);
     
 void zmain(void)
 {
     //struct sensors_ ref;
     struct sensors_ dig;
     IR_Start();
+    Ultra_Start(); 
     
     int start=0, end=0;
     
     
     int delay=0;
-    int speed=100;
-    int turnSpeed = 230;
-    int turnMinSpeed = 30;
+    int speed=50;
+    int turnSpeed = 220;
+    int turnMinSpeed = 0;
     int turnSharpSpeed = 255;
-    int turnMinSharpSpeed = 30;
+    int turnMinSharpSpeed = 0;
     
     int halfDist=22000;
     int halfAngle=26250;
 
 
-    int maxcons = 1;
+    int maxcons = 50;
     int count = 0;
     int a = -1;
     int b = 0;
     int counter = 0;
     int inersectionCounter=0;
+    
+    int X=0;
+    int Y=0;
+    int back=0, side=0, right=0;
     
     
     motor_start();
@@ -1439,8 +1444,8 @@ void zmain(void)
         reflectance_digital(&dig); 
         printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);
         vTaskDelay(5000);
-    }*/
-    
+    }
+    */
     
     
     
@@ -1463,9 +1468,10 @@ void zmain(void)
     while(true)
     {
         reflectance_digital(&dig); 
+        int d = Ultra_GetDistance();
     
+        
         // it filters noise in 00 and 11 in center sensors and count when center flips from 0 to 1
-
         if(dig.L3==0 && dig.R3==0){
             if(count > 0){
                 count -= 1;
@@ -1473,7 +1479,7 @@ void zmain(void)
                 a = b+1;
                 counter = a;
             }
-        } else if (dig.L3==1 && dig.R3==1){
+        } else if ((dig.L3==1 && dig.L2==1&& dig.L1==1 && dig.R1==1)||(dig.R3==1 && dig.R2==1&& dig.R1==1 && dig.L1==1)){
             if (count <= maxcons){
                 count += 1;
             }else{
@@ -1502,43 +1508,86 @@ void zmain(void)
             }
             
             // second intersection
-            else if (inersectionCounter==2){
-                // Tank turn
-                motor_forward(speed, halfDist/speed);
-                tank_left(speed, halfAngle/speed);
-                motor_forward(0,0);
-                motor_stop();
+            else if (inersectionCounter>2){
+                
+                if (back==0 && side==0){
+                    Y=Y+1;
+                }
+                
+                X=X+side;
+                
+                if (X==-3){
+                    right =1;
+                }
+                
+
+                
+                if (back==1 && X>-3 && right==0){
+                    tank_left(speed, halfDist/speed, halfAngle/speed);
+                    side=-1;
+                    back=0;
+                } else if (side==-1){
+                    tank_right(speed, halfDist/speed, halfAngle/speed);
+                    side=0;
+                    back=0;
+                }
+                
+                if (back==1 && X<3 && right==1){
+                    tank_right(speed, halfDist/speed, halfAngle/speed);
+                    side=1;
+                    back=0;
+                } else if (side==1){
+                    tank_left(speed, halfDist/speed, halfAngle/speed);
+                    side=0;
+                    back=0;
+                }
+                
+                
+                printf("Coordinate X,Y: %d, %d\n",X, Y);
+                
+                
+
             }
         }
         
+        // detect obstruction
+        if (d<3){
+            back=1;
+        }
+        
+
         
         
-        if(dig.L1==1 && dig.R1==1){
+        
+        if(dig.L1==1 && dig.R1==1 && back==0){
             motor_forward(speed,delay);
-        } 
+            } 
+        
+        else if (dig.L1==1 && dig.R1==1 && back==1){
+            motor_backward(speed,delay);
+            }
         
         // Turn left
-        else if(dig.L2==1 && dig.L1==1){
+        else if(dig.L2==1 && dig.L1==1 && back==0){
             motor_turn(turnMinSpeed,turnSpeed,delay);
         }
         
         // Turn right
-        else if(dig.R1==1 && dig.R2==1){
+        else if(dig.R1==1 && dig.R2==1 && back==0){
             motor_turn(turnSpeed,turnMinSpeed, delay);
         } 
         
         // Turn sharp left
-        else if(dig.L3==1 && dig.L2==1){
+        else if(dig.L3==1 && dig.L2==1 && back==0){
             motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
         }
         
         // Turn sharp right
-        else if(dig.R2==1 && dig.R3==1){
+        else if(dig.R2==1 && dig.R3==1 && back==0){
             motor_turn(turnSharpSpeed, turnMinSharpSpeed, delay);
         }
 
-        
-        
+
         
         
         //vTaskDelay(10);
@@ -1546,14 +1595,16 @@ void zmain(void)
     }
 }
 
-void tank_left(uint8 l_speed, uint32 delay)
+void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay)
 {
-    SetMotors(1,0, l_speed, l_speed, delay);
+    SetMotors(0,0, l_speed, l_speed, distDelay);
+    SetMotors(1,0, l_speed, l_speed, angleDelay);
 }
 
-void tank_right(uint8 r_speed, uint32 delay)
+void tank_right(uint8 r_speed, uint32 distDelay, uint32 angleDelay)
 {
-    SetMotors(0,1, r_speed, r_speed, delay);
+    SetMotors(0,0, r_speed, r_speed, distDelay);
+    SetMotors(0,1, r_speed, r_speed, angleDelay);
 }
 
     
@@ -1710,7 +1761,7 @@ void check_obstacle(struct sensors_ *dig){
 // Sumo wrestling group 6 Code
 
 
-#if 1
+#if 0
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 delay);
