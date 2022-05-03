@@ -48,6 +48,7 @@
 #include "serial1.h"
 #include <unistd.h>
 #include <stdlib.h>
+#define PI 3.141592654
 /**
  * @file    main.c
  * @brief   
@@ -1138,7 +1139,7 @@ void zmain(void)
         }
         vTaskDelay(10);
     }
- }   
+ }
 
 #endif
 
@@ -1717,15 +1718,23 @@ void check_obstacle(struct sensors_ *dig){
     
 void zmain(void)
 {
-
+    Ultra_Start();   
     struct sensors_ dig;
     IR_Start();
+    struct accData_ data;
 
     int slowSpeed = 100;
     int delay=0;
-    int speed=210;
+    int speed=0;
     int backTime = 300;
     int inersectionCounter=0;
+    int c=0;
+    double angle=0;
+    
+    int maxXimpact=1500;
+    int maxYimpact=1500;
+    int bufferNumber = 1000;
+    
     
     int seed = xTaskGetTickCount();
     srand(seed);
@@ -1735,6 +1744,14 @@ void zmain(void)
     
     reflectance_start();
     reflectance_set_threshold(15000, 14000, 14000, 14000, 14000, 15000); 
+ 
+    LSM303D_Start();
+    
+    
+    
+    
+
+    
     
     
     // waiting for user to press the switch button and lift from the button
@@ -1742,6 +1759,62 @@ void zmain(void)
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(1000);
 
+/*
+    while(true){
+    //motor_forward(255,0);
+    LSM303D_Read_Acc(&data);
+    //print_mqtt("Zumo06/acc","%d, %d",data.accX, data.accY);
+    printf("%d\n",data.accX);
+    vTaskDelay(100);
+    }
+    */
+    
+    
+    while(true){
+        LSM303D_Read_Acc(&data);
+        
+        if (c<bufferNumber){
+            c++;
+        }
+        
+        // 0 to 90 degree
+        if (data.accX < -maxXimpact && data.accY < -maxYimpact && c==bufferNumber){
+            angle = atan(abs(data.accY)/abs(data.accX))*180.0/PI;
+            print_mqtt("Zumo06/", "Angle a: %.2f",angle);
+            c=0;
+        }
+        
+        // 90 to 180 degree
+        else if (data.accX > maxXimpact && data.accY < -maxYimpact && c==bufferNumber){
+            angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
+            print_mqtt("Zumo06/", "Angle b: %.2f",angle);
+            c=0;
+        }
+        
+        // 180 to 270 degree
+        else if (data.accX > maxXimpact && data.accY > maxYimpact && c==bufferNumber){
+            angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180.0/PI;
+            print_mqtt("Zumo06/", "Angle c: %.2f",angle);
+            c=0;
+        } 
+        
+        // 270 to 360 degree
+        else if (data.accX < -maxXimpact && data.accY > maxYimpact && c==bufferNumber){
+            angle = 270.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
+            print_mqtt("Zumo06/", "Angle d: %.2f",angle);
+            c=0;
+        }
+    
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     // check if the vehicle is centered.
     do{
@@ -1762,21 +1835,21 @@ void zmain(void)
         }
     }
     
-    /*
-    while(true){
-        tank_left(speed,5000);
-        motor_stop();
-    }
-    */
-    
+   
     
     while(true)
     {
+        LSM303D_Read_Acc(&data);
+        int d = Ultra_GetDistance();
         int r = rand() % 6;
         
         motor_forward(speed,delay);
         
         reflectance_digital(&dig); 
+        
+        if(d < 10) {
+            motor_forward(255,delay);
+        }
 
         
         // Reverse and tank turn right
@@ -1791,6 +1864,45 @@ void zmain(void)
             tank_left(speed,50000/speed + r*50000/speed/10);
         } 
         
+        /*
+        
+        if (c<bufferNumber){
+            c++;
+        }
+        
+       
+        
+        // 0 to 90 degree
+        if (data.accX < -maxXimpact && data.accY < -maxYimpact && c==bufferNumber){
+            angle = atan(abs(data.accY)/abs(data.accX))*180/PI;
+            print_mqtt("Zumo06/", "Angle: %.2f",angle);
+            c=0;
+        }
+        
+        // 90 to 180 degree
+        else if (data.accX > maxXimpact && data.accY < -maxYimpact && c==bufferNumber){
+            angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180/PI;
+            print_mqtt("Zumo06/", "Angle: %.2f",angle);
+            c=0;
+        }
+        
+        // 180 to 270 degree
+        else if (data.accX > maxXimpact && data.accY > maxYimpact && c==bufferNumber){
+            angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180/PI;
+            print_mqtt("Zumo06/", "Angle: %.2f",angle);
+            c=0;
+        } 
+        
+        // 270 to 360 degree
+        else if (data.accX < -maxXimpact && data.accY > maxYimpact && c==bufferNumber){
+            angle = 270.0 + atan(abs(data.accX)/abs(data.accY))*180/PI;
+            print_mqtt("Zumo06/", "Angle: %.2f",angle);
+            c=0;
+        }
+        
+        */
+        
+        //printf("%8d %8d\n",data.accX, data.accY);
 
 
     }
