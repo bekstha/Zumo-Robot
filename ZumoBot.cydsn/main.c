@@ -1183,7 +1183,7 @@ void zmain(void)
 
 // Line follower project group 6 Code
 
-#if 0
+#if 1
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 delay);
@@ -1302,13 +1302,13 @@ void zmain(void)
         // go straight after first intersection line
         else if(dig.L1==1 && dig.R1==1 && inersectionCounter>=1){
             motor_forward(speed,delay);
-            /*
+            
             // print line once it turns back from miss
             if (miss==1){
                 print_mqtt("Zumo06/", "line");
                 miss=0;
                 line=1;}
-            */
+            
         } 
         
         // slow turn left
@@ -1324,25 +1324,25 @@ void zmain(void)
         // sharp turn left
         else if(dig.L3==1 && dig.L2==1){
             tank_left(tankTurnSpeed,delay);
-            /*
+            
             // print miss once it deviate from line
             if  (line==1){
             print_mqtt("Zumo06/", "miss");
             miss=1;
             line=0;}
-            */
+            
         }
         
         // sharp turn right
         else if(dig.R2==1 && dig.R3==1){
             tank_right(tankTurnSpeed,delay);
-            /*
+            
             // print miss once it deviate from line
             if  (line==1){
             print_mqtt("Zumo06/", "miss");
             miss=1;
             line=0;}
-            */
+            
         }
     }
 }
@@ -1730,7 +1730,7 @@ void check_obstacle(struct sensors_ *dig){
 // Sumo wrestling group 6 Code
 
 
-#if 1
+#if 0
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 delay);
