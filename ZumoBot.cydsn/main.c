@@ -1181,403 +1181,8 @@ void zmain(void)
 
 
 
-// Line follower project group 6 Code
-
-#if 1
-
-    // Initializing tank turn
-    void tank_left(uint8 l_speed, uint32 delay);
-    void tank_right(uint8 r_speed, uint32 delay);
-    
-
-void zmain(void)
-{
-    int codeStart;
-    codeStart= xTaskGetTickCount();
-    
-    int start=0, stop=0;
-    
-    // Mqtt code
-    int line=0, miss=0;
-    // Mqtt
-
-    struct sensors_ dig;
-    IR_Start();
-    
-    // Internal Variables
-    int delay=0;
-    int slowSpeed = 160;
-    int speed=230;
-    int tankTurnSpeed = 230;
-    int turnSpeed = 200;
-    int turnMinSpeed = 0;
-
-    
-    int maxcons = 2;
-    int count = 0;
-    int a = -1;
-    int b = 0;
-    int counter = 0;
-    int inersectionCounter=0;
-    
-    
-    motor_start();
-    motor_forward(0,0);
-    
-    reflectance_start();
-    reflectance_set_threshold(15000, 14000, 13500, 13500, 14000, 15000);
-    
-    // waiting for user to press the switch button and lift from the button
-    while(SW1_Read() == 1) vTaskDelay(10);
-    while(SW1_Read() == 0) vTaskDelay(1000);
-    
-    
-    // check if the vehicle is centered.
-    do{
-        reflectance_digital(&dig);
-    } 
-    while(dig.L1==0 || dig.R1==0);
-    
-    
-    while(true)
-    {
-        
-        reflectance_digital(&dig); 
-        
-
-        if(dig.L3==0 && dig.R3==0){
-            if(count > 0){
-                count -= 1;
-            } else{
-                a = b+1;
-                counter = a;
-            }
-        } else if (dig.L3==1 && dig.R3==1){
-            if (count <= maxcons){
-                count += 1;
-            }else{
-                b = a+1;
-                counter = b;
-            }
-        }
-
-        
-        if(counter==2){
-            count = 0;
-            a = -1;
-            b = 0;
-            counter = 0;
-            inersectionCounter++;
-            if (inersectionCounter==1){
-                motor_forward(0,0);
-                print_mqtt("Zumo06/", "ready line");
-                BatteryLed_Write(1);
-                IR_wait();  // wait for IR command
-                BatteryLed_Write(0);
-                start = xTaskGetTickCount();
-                print_mqtt("Zumo06/", "start: %d",start-codeStart);
-                line=1;             //Mqtt code
-                motor_forward(160,200);
-                
-            }else if (inersectionCounter==2){
-                motor_forward(speed,delay);
-                
-            } else{
-                motor_forward(0,0);                
-                motor_stop();
-                stop = xTaskGetTickCount();
-                print_mqtt("Zumo06/", "stop: %d",stop);
-                print_mqtt("Zumo06/", "time: %d",stop-start);
-                break;
-            }
-
-        }
-        
-        // go straight before first intersection line
-        if(dig.L1==1 && dig.R1==1 && inersectionCounter<1){
-            motor_forward(slowSpeed,delay);
-        } 
-        
-        
-        // go straight after first intersection line
-        else if(dig.L1==1 && dig.R1==1 && inersectionCounter>=1){
-            motor_forward(speed,delay);
-            
-            // print line once it turns back from miss
-            if (miss==1){
-                print_mqtt("Zumo06/", "line");
-                miss=0;
-                line=1;}
-            
-        } 
-        
-        // slow turn left
-        else if(dig.L2==1 && dig.L1==1){
-            motor_turn(turnMinSpeed,turnSpeed,delay);          
-        } 
-        
-        // slow turn right
-        else if(dig.R1==1 && dig.R2==1){
-            motor_turn(turnSpeed,turnMinSpeed,delay);
-        } 
-        
-        // sharp turn left
-        else if(dig.L3==1 && dig.L2==1){
-            tank_left(tankTurnSpeed,delay);
-            
-            // print miss once it deviate from line
-            if  (line==1){
-            print_mqtt("Zumo06/", "miss");
-            miss=1;
-            line=0;}
-            
-        }
-        
-        // sharp turn right
-        else if(dig.R2==1 && dig.R3==1){
-            tank_right(tankTurnSpeed,delay);
-            
-            // print miss once it deviate from line
-            if  (line==1){
-            print_mqtt("Zumo06/", "miss");
-            miss=1;
-            line=0;}
-            
-        }
-    }
-}
 
 
-void tank_left(uint8 l_speed, uint32 delay)
-{
-    SetMotors(1,0, l_speed, l_speed, delay);
-}
-
-void tank_right(uint8 r_speed, uint32 delay)
-{
-    SetMotors(0,1, r_speed, r_speed, delay);
-}
-
-
-#endif
-
-
-// Maze runner project group 6 Code
-
-#if 0
-
-    // Initializing tank turn
-    void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay);
-    void tank_right(uint8 r_speed, uint32 distDelay, uint32 angleDelay);
-    
-void zmain(void)
-{
-    //struct sensors_ ref;
-    struct sensors_ dig;
-    IR_Start();
-    Ultra_Start(); 
-    
-    int start=0, end=0;
-    
-    
-    int delay=0;
-    int speed=50;
-    int turnSpeed = 100;
-    int turnMinSpeed = 0;
-    int turnSharpSpeed = 180;
-    int turnMinSharpSpeed = 0;
-    
-    int halfDist=22000;
-    int halfAngle=26250;
-
-
-    int maxcons = 50;
-    int count = 0;
-    int a = -1;
-    int b = 0;
-    int counter = 0;
-    int inersectionCounter=0;
-    
-    int X=0;
-    int Y=0;
-    int back=0, side=0, right=0, margin=0;
-    
-    
-    motor_start();
-    motor_forward(0,0);
-    
-    reflectance_start();
-    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); 
-
-
-    // waiting for user to press the switch button and lift from the button
-    /*
-    while(SW1_Read() == 1) vTaskDelay(10);
-    while(SW1_Read() == 0) vTaskDelay(10);
-    */
-    IR_wait();
-    start = xTaskGetTickCount();
-    
-    
-    // check if the vehicle is centered.
-    do{
-        reflectance_digital(&dig);
-    } 
-    while(dig.L1==0 || dig.R1==0);
-
-    
-    while(true)
-    {
-        reflectance_digital(&dig); 
-        int d = Ultra_GetDistance();
-    
-        
-        // it filters noise in 00 and 11 in center sensors and count when center flips from 0 to 1
-        if(dig.L3==0 && dig.R3==0){
-            if(count > 0){
-                count -= 1;
-            } else{
-                a = b+1;
-                counter = a;
-            }
-        } else if ((dig.L3==1 && dig.L2==1&& dig.L1==1 && dig.R1==1)||(dig.R3==1 && dig.R2==1&& dig.R1==1 && dig.L1==1)){
-            if (count <= maxcons){
-                count += 1;
-            }else{
-                b = a+1;
-                counter = b;
-            }
-        }
-        
-        
-        
-        
-        if(counter==2){
-            count = 0;
-            a = -1;
-            b = 0;
-            counter = 0;
-            inersectionCounter++;
-            
-            // first intersection wait for IR command
-            if (inersectionCounter==1){
-                motor_forward(0,0);
-                end = xTaskGetTickCount();
-                printf("time: %d\n",end-start);
-                IR_wait();  // wait for IR command
-                
-            }
-            
-            // second intersection
-            else if (inersectionCounter>2){
-                
-                if (back==0 && side==0){
-                    Y=Y+1;
-                }
-                
-                X=X+side;
-                
-                if (Y<=10){
-                    margin=3;
-                }else if(Y==11){
-                    margin=2;
-                } else if(Y==12){
-                    margin=1;
-                }
-                
-                if (X==-margin){
-                    right =1;
-                }
-                
-
-                
-                if (back==1 && X>-margin && right==0){
-                    tank_left(speed, halfDist/speed, halfAngle/speed);
-                    side=-1;
-                    back=0;
-                } else if (side==-1){
-                    tank_right(speed, halfDist/speed, halfAngle/speed);
-                    side=0;
-                    back=0;
-                }
-                
-                if (back==1 && X<margin && right==1){
-                    tank_right(speed, halfDist/speed, halfAngle/speed);
-                    side=1;
-                    back=0;
-                } else if (side==1){
-                    tank_left(speed, halfDist/speed, halfAngle/speed);
-                    side=0;
-                    back=0;
-                }
-                
-                
-                printf("Coordinate X,Y: %d, %d\n",X, Y);
-                
-                
-
-            }
-        }
-        
-        // detect obstruction
-        if (d<3){
-            back=1;
-        }
-        
-
-        
-        
-        
-        if(dig.L1==1 && dig.R1==1 && back==0){
-            motor_forward(speed,delay);
-            } 
-        
-        else if (dig.L1==1 && dig.R1==1 && back==1){
-            motor_backward(speed,delay);
-            }
-        
-        // Turn left
-        else if(dig.L2==1 && dig.L1==1 && back==0){
-            motor_turn(turnMinSpeed,turnSpeed,delay);
-        }
-        
-        // Turn right
-        else if(dig.R1==1 && dig.R2==1 && back==0){
-            motor_turn(turnSpeed,turnMinSpeed, delay);
-        } 
-        
-        // Turn sharp left
-        else if(dig.L3==1 && dig.L2==1 && back==0){
-            motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
-        }
-        
-        // Turn sharp right
-        else if(dig.R2==1 && dig.R3==1 && back==0){
-            motor_turn(turnSharpSpeed, turnMinSharpSpeed, delay);
-        }
-
-
-        
-        
-        //vTaskDelay(10);
-
-    }
-}
-
-void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay)
-{
-    SetMotors(0,0, l_speed, l_speed, distDelay);
-    SetMotors(1,0, l_speed, l_speed, angleDelay);
-}
-
-void tank_right(uint8 r_speed, uint32 distDelay, uint32 angleDelay)
-{
-    SetMotors(0,0, r_speed, r_speed, distDelay);
-    SetMotors(0,1, r_speed, r_speed, angleDelay);
-}
-
-    
-# endif
 
 
 
@@ -1726,11 +1331,42 @@ void check_obstacle(struct sensors_ *dig){
 /* [] END OF FILE */
 #endif
 
+// ************************************************************
 
-// Sumo wrestling group 6 Code
 
 
-#if 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// **************************** PROJECT 1 *********************
+// Sumo wrestling group 6:
+// ***********************************************************
+
+#if 1
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 delay);
@@ -1738,11 +1374,15 @@ void check_obstacle(struct sensors_ *dig){
     
 void zmain(void)
 {
+    int codeStart=xTaskGetTickCount();
+    int start=0, end=0, hit=0;
+    
     Ultra_Start();   
     struct sensors_ dig;
     IR_Start();
     struct accData_ data;
 
+    // Internal variables controlling robot spped and time
     int slowSpeed = 100;
     int delay=0;
     int speed=230;
@@ -1752,29 +1392,31 @@ void zmain(void)
     double angle=0;
     char robotName[10]="Zumo06_A/";
     
+    // caliberated varibles of acceleration and time window to to filter noise
     int maxXimpact=16000;
     int maxYimpact=16000;
     int bufferNumber = 100;
     
-
-    
-    
-    int seed = xTaskGetTickCount();
-    srand(seed);
-    
+    // Starting Motor
     motor_start();
     motor_forward(0,0);
     
+    // Starting reflection sensor
     reflectance_start();
     reflectance_set_threshold(15000, 14000, 14000, 14000, 14000, 15000); 
  
+    // Starting Acceleration sensor
     LSM303D_Start();
     
     
     // waiting for user to press the switch button and lift from the button
-    
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(1000);
+    
+    // Initializing seed for random algorithm 
+    int seed = xTaskGetTickCount();
+    srand(seed);
+    
     
     /*
     // calibration of acceleration code starts here
@@ -1824,50 +1466,53 @@ void zmain(void)
     } 
     while(dig.L1==0 || dig.R1==0);
     
-    // find intersection
+    // find first intersection
     while(inersectionCounter==0){
         reflectance_digital(&dig); 
         motor_forward(slowSpeed,delay);
         
         if(dig.L3==1 && dig.R3==1 ){
             motor_forward(0,0);
-            IR_wait();
+            print_mqtt(robotName, "ready zumo");
+            IR_wait();  // wait for IR from user
+            start=xTaskGetTickCount()-codeStart;
+            print_mqtt(robotName, "start: %d",start);
             inersectionCounter++;
             motor_forward(speed,500);
         }
     }
     
-   
-    
-    while(true)
+    // Main Loop
+    while(SW1_Read() == 1)
     {
         LSM303D_Read_Acc(&data);
         int d = Ultra_GetDistance();
         int r = rand() % 6;
         
+        // moving motor forward normally
         motor_forward(speed,delay);
-        
         reflectance_digital(&dig); 
         
+        // Speeding up when robot sees some obstacles nearby
         if(d < 10) {
             motor_forward(255,delay);
         }
 
         
-        // Reverse and tank turn right
+        // Reverse and tank turn right with random angle
         if(dig.L3==1 || dig.L2==1 || dig.L1==1){
             motor_backward(speed,backTime);
             tank_right(speed,50000/speed + r*50000/speed/10);
         }
         
-        // Reverse and tank turn left
+        // Reverse and tank turn left with random angle
         else if(dig.R3==1 || dig.R2==1 || dig.R1==1){
             motor_backward(speed,backTime);
             tank_left(speed,50000/speed + r*50000/speed/10);
         } 
         
         
-        
+        // time for ignore acceleration spikes once impact acceleration is detected
         if (c<bufferNumber){
             c++;
         }
@@ -1875,6 +1520,9 @@ void zmain(void)
 
         // 0 to 90 degree or 0 to 270
         if (data.accX < -maxXimpact && c==bufferNumber){
+            hit=xTaskGetTickCount();
+            print_mqtt(robotName, "hit: %d",hit-codeStart);
+            
             if (data.accY>0){
                 // angle is 0 to 90 degree
                 angle = atan(abs(data.accY)/abs(data.accX))*180.0/PI;
@@ -1892,6 +1540,9 @@ void zmain(void)
         
         // 0 to 90 and 90 to 180
         else if(data.accY > maxYimpact && c==bufferNumber){
+            hit=xTaskGetTickCount();
+            print_mqtt(robotName, "hit: %d",hit-codeStart);
+            
             if (data.accX<0){
                 // angle is 0 to 90 degree
                 angle = atan(abs(data.accY)/abs(data.accX))*180.0/PI;
@@ -1907,6 +1558,9 @@ void zmain(void)
         
         // 90 to 180 and 180 to 270
         else if(data.accX > maxXimpact && c==bufferNumber){
+            hit=xTaskGetTickCount();
+            print_mqtt(robotName, "hit: %d",hit-codeStart);
+            
             if(data.accY>0){
                 // angle is 90 to 180
                 angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
@@ -1923,6 +1577,9 @@ void zmain(void)
         
         // 180 to 270 and 270 to 360
         else if(data.accY < -maxYimpact && c==bufferNumber){
+            hit=xTaskGetTickCount();
+            print_mqtt(robotName, "hit: %d",hit-codeStart);
+            
             if(data.accX>0){
                 // angle is 180 to 270
                 angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180.0/PI;
@@ -1937,7 +1594,11 @@ void zmain(void)
         }
         
     }
-    // WHILE LOOP ENDS HERE
+    motor_forward(0,0);
+    motor_stop();
+    end = xTaskGetTickCount();
+    print_mqtt(robotName, "stop: %d",end-codeStart);
+    print_mqtt(robotName, "time: %d",end-start);
 }
 
 void tank_left(uint8 l_speed, uint32 delay)
@@ -1950,11 +1611,489 @@ void tank_right(uint8 r_speed, uint32 delay)
     SetMotors(0,1, r_speed, r_speed, delay);
 }
 
+# endif
+// ****************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ******************** PROJECT 2 ***********************
+// Line follower Group 6:
+// ******************************************************
+
+#if 0
+
+    // Initializing tank turn
+    void tank_left(uint8 l_speed, uint32 delay);
+    void tank_right(uint8 r_speed, uint32 delay);
     
+
+void zmain(void)
+{
+    // time marker for code start
+    int codeStart;
+    codeStart= xTaskGetTickCount();
+    
+    int start=0, stop=0;
+    
+    // Mqtt code
+    int line=0, miss=0;
+    // Mqtt
+
+    struct sensors_ dig;
+    IR_Start();
+    
+    // Internal Variables to control speed and turning speed
+    int delay=0;
+    int slowSpeed = 160;
+    int speed=230;
+    int tankTurnSpeed = 230;
+    int turnSpeed = 200;
+    int turnMinSpeed = 0;
+
+    // internal variables for intersection counter and filter any noise if happen so based on maxcons number.
+    int maxcons = 2;
+    int count = 0;
+    int a = -1;
+    int b = 0;
+    int counter = 0;
+    int inersectionCounter=0;
+    
+    // starting the motor
+    motor_start();
+    motor_forward(0,0);
+    
+    // starting the reflection sensor and assigning caliberated threshold number.
+    reflectance_start();
+    reflectance_set_threshold(15000, 14000, 13500, 13500, 14000, 15000);
+    
+    // waiting for user to press the switch button and lift from the button
+    while(SW1_Read() == 1) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(1000);
+    
+    
+    // check if the vehicle is centered.
+    do{
+        reflectance_digital(&dig);
+    } 
+    while(dig.L1==0 || dig.R1==0);
+    
+    
+    // Main loop
+    while(true)
+    {
+        
+        reflectance_digital(&dig); 
+        
+        // Logic finding the intersection with filtering some noise based on maxcons number
+        if(dig.L3==0 && dig.R3==0){
+            if(count > 0){
+                count -= 1;
+            } else{
+                a = b+1;
+                counter = a;
+            }
+        } else if (dig.L3==1 && dig.R3==1){
+            if (count <= maxcons){
+                count += 1;
+            }else{
+                b = a+1;
+                counter = b;
+            }
+        }
+
+        // Detection of intersection.
+        if(counter==2){
+            count = 0;
+            a = -1;
+            b = 0;
+            counter = 0;
+            inersectionCounter++;
+            
+            // First intersection
+            if (inersectionCounter==1){
+                motor_forward(0,0);
+                print_mqtt("Zumo06/", "ready line");
+                BatteryLed_Write(1);
+                IR_wait();  // wait for IR command
+                BatteryLed_Write(0);
+                start = xTaskGetTickCount();
+                print_mqtt("Zumo06/", "start: %d",start-codeStart);
+                line=1;             //Mqtt code
+                motor_forward(160,200);
+            }
+            
+            // Second intersection
+            else if (inersectionCounter==2){
+                motor_forward(speed,delay);
+                
+            } 
+            
+            // Any intersection after second intersection(third intersection to stop the robot)
+            else{
+                motor_forward(0,0);                
+                motor_stop();
+                stop = xTaskGetTickCount();
+                print_mqtt("Zumo06/", "stop: %d",stop);
+                print_mqtt("Zumo06/", "time: %d",stop-start);
+                break;
+            }
+        }
+        
+        
+        // go straight before first intersection line with slow speed
+        if(dig.L1==1 && dig.R1==1 && inersectionCounter<1){
+            motor_forward(slowSpeed,delay);
+        } 
+        
+        
+        // go straight after first intersection line
+        else if(dig.L1==1 && dig.R1==1 && inersectionCounter>=1){
+            motor_forward(speed,delay);
+            
+            // print line once it turns back from miss
+            if (miss==1){
+                print_mqtt("Zumo06/", "line");
+                miss=0;
+                line=1;}
+        } 
+        
+        // slow turn left
+        else if(dig.L2==1 && dig.L1==1){
+            motor_turn(turnMinSpeed,turnSpeed,delay);          
+        } 
+        
+        // slow turn right
+        else if(dig.R1==1 && dig.R2==1){
+            motor_turn(turnSpeed,turnMinSpeed,delay);
+        } 
+        
+        // sharp turn left
+        else if(dig.L3==1 && dig.L2==1){
+            tank_left(tankTurnSpeed,delay);
+            
+            // print miss once it deviate from line
+            if  (line==1){
+            print_mqtt("Zumo06/", "miss");
+            miss=1;
+            line=0;}
+        }
+        
+        // sharp turn right
+        else if(dig.R2==1 && dig.R3==1){
+            tank_right(tankTurnSpeed,delay);
+            
+            // print miss once it deviate from line
+            if  (line==1){
+            print_mqtt("Zumo06/", "miss");
+            miss=1;
+            line=0;}
+        }
+    }
+}
+
+// Function for left tank turn
+void tank_left(uint8 l_speed, uint32 delay)
+{
+    SetMotors(1,0, l_speed, l_speed, delay);
+}
+
+// Functon for right tank turn
+void tank_right(uint8 r_speed, uint32 delay)
+{
+    SetMotors(0,1, r_speed, r_speed, delay);
+}
+
+#endif
+// *************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ********************* PROJECT 3 ******************************************
+// Maze runner project group 6 Code with start time end time and coordinate complete
+// **************************************************************************
+#if 0
+
+    // Initializing tank turn
+    void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay);
+    void tank_right(uint8 r_speed, uint32 distDelay, uint32 angleDelay);
+    
+void zmain(void)
+{
+    struct sensors_ dig;
+    IR_Start();
+    Ultra_Start(); 
+
+    int start=0, end=0;
+    
+    // variables controlling speed and course adjustment parameters
+    int delay=0;
+    int speed=100;
+    int turnSpeed = 200;
+    int turnMinSpeed = 0;
+    int turnSharpSpeed = 250;
+    int turnMinSharpSpeed = 0;
+    
+    // caliberated values for tank turn.
+    //int halfDist=22000;
+    //int halfAngle=26250;
+    int halfDist=20000;
+    int backHalfDist=17000;
+    int halfAngle=25000;
+
+    // internal variables taking care of intersection counters
+    int maxcons = 20;
+    int count = 0;
+    int a = -1;
+    int b = 0;
+    int counter = 0;
+    int inersectionCounter=0;
+    
+
+    motor_start();
+    motor_forward(0,0);
+    
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); 
+
+    // wait for user button to pressed and released, code will start running after 1 sec.
+    while(SW1_Read() == 1) vTaskDelay(10);
+    while(SW1_Read() == 0) vTaskDelay(1000);
+
+    // code start timestamps and use this as a seed for random algorithm
+    int codeStart = xTaskGetTickCount();
+    srand(codeStart);
+    
+    // Variables controlling coordinates and movement tracking
+    int X=0;
+    int Y=0;
+    int back=0, side=0, right = rand()%2, margin=0;
+    
+    
+    // check if the vehicle is centered.
+    do{
+        reflectance_digital(&dig);
+    } 
+    while(dig.L1==0 || dig.R1==0);
+
+    // main loop of the programme
+    while(true)
+    {
+        reflectance_digital(&dig); 
+        int d = Ultra_GetDistance();
+        
+        
+        // it filters noise in 00 and 11 in center sensors and count when center flips from 0 to 1 based on maxcons number
+        if(dig.L3==0 && dig.R3==0){
+            if(count > 0){
+                count -= 1;
+            } else{
+                a = b+1;
+                counter = a;
+            }
+        } else if ((dig.L3==1 && dig.L2==1&& dig.L1==1 )||(dig.R3==1 && dig.R2==1&& dig.R1==1 )){
+            if (count <= maxcons){
+                count += 1;
+            }else{
+                b = a+1;
+                counter = b;
+            }
+        }
+        
+        // Detection of intersection
+        if(counter==2){
+            count = 0;
+            a = -1;
+            b = 0;
+            counter = 0;
+            inersectionCounter++;
+            
+            // first intersection wait for IR command
+            if (inersectionCounter==1){
+                motor_forward(0,0);
+                printf("ready maze\n");
+                IR_wait();  // wait for IR command
+                start = xTaskGetTickCount();
+                printf("start: %d\n",start-codeStart);
+            }
+            
+            // second intersection where X = 0 and Y=0
+            else if(inersectionCounter==2){
+                printf("Coordinate X = %d, Y = %d\n",X, Y);
+            }
+            
+            // all intersection after second intersection
+            else if (inersectionCounter>2){
+                
+                // updating Y coordinate based on Back and side value
+                if (back==0 && side==0){
+                    Y=Y+1;
+                }
+                
+                // updating X coordinate based on side value
+                X += side;
+                
+                // creating margin which taked the boundary of maze in account
+                if (Y<=10){
+                    margin=3;
+                }else if(Y==11){
+                    margin=2;
+                } else if(Y==12){
+                    margin=1;
+                }else if (Y==13){
+                    margin=0;
+                }
+                
+                // Deciding where to turn based on margin value and X coordinate
+                if (X <= -margin){
+                    right =1;
+                }else if (X >= margin){
+                    right = 0;
+                }
+                
+                // Function turning left and then right after backward movement or hitting right margin/boundary
+                if ((back==1 && X>-margin && right==0)||(back==0 && X>margin)){
+                    if (back==1){
+                        tank_left(speed, backHalfDist/speed, halfAngle/speed);
+                    }else if (back ==0){
+                        tank_left(speed, halfDist/speed, halfAngle/speed);
+                    }
+                    side=-1;
+                    back=0;
+                } else if (side==-1){
+                    tank_right(speed, halfDist/speed, halfAngle/speed);
+                    side=0;
+                    back=0;
+                }
+                
+                // Function turning right and then left after backward movement or hitting left margin/boundary
+                if ((back==1 && X<margin && right==1)||(back==0 && X<-margin)){
+                    if (back==1){
+                        tank_right(speed, backHalfDist/speed, halfAngle/speed);
+                    }else{
+                        tank_right(speed, halfDist/speed, halfAngle/speed);
+                    }
+                    side=1;
+                    back=0;
+                } else if (side==1){
+                    tank_left(speed, halfDist/speed, halfAngle/speed);
+                    side=0;
+                    back=0;
+                }
+                
+                // Printing coordinate of each intersection
+                printf("Coordinate X = %d, Y = %d\n",X, Y);
+            }
+        }
+        
+        // detect obstruction and ask to back
+        if (d<4){
+            back=1;
+        }
+        
+        // stop the robot at the end and terminate from the loop
+        if (Y==13 && dig.L3==0 && dig.L2==0 && dig.L1==0 && dig.R1==0&& dig.R2==0&& dig.R3==0){
+            motor_forward(0,0);
+            motor_stop();
+            end = xTaskGetTickCount();
+            printf("stop: %d\n",end-codeStart);
+            printf("time: %d\n",end-start);
+            break;
+        }
+
+        
+        // Moving motor forward
+        if(dig.L1==1 && dig.R1==1 && back==0){
+            motor_forward(speed,delay);
+            } 
+        // Moving motor backward
+        else if (dig.L1==1 && dig.R1==1 && back==1){
+            motor_backward(speed,delay);
+            }
+        
+        // Turn left for course adjustment
+        else if(dig.L2==1 && dig.L1==1 && back==0){
+            motor_turn(turnMinSpeed,turnSpeed,delay);
+        }
+        
+        // Turn right for course adjustment
+        else if(dig.R1==1 && dig.R2==1 && back==0){
+            motor_turn(turnSpeed,turnMinSpeed, delay);
+        } 
+        
+        // Turn sharp left for course adjustment
+        else if(dig.L3==1 && dig.L2==1 && back==0){
+            motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
+        }
+        
+        // Turn sharp right for course adjustment
+        else if(dig.R2==1 && dig.R3==1 && back==0){
+            motor_turn(turnSharpSpeed, turnMinSharpSpeed, delay);
+        }
+    }
+}
+
+// Function for Tank left turn in the intersection
+void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay)
+{
+    SetMotors(0,0, l_speed, l_speed, distDelay);
+    SetMotors(1,0, l_speed, l_speed, angleDelay);
+}
+
+// Function for Tank right turn in the intersection
+void tank_right(uint8 r_speed, uint32 distDelay, uint32 angleDelay)
+{
+    SetMotors(0,0, r_speed, r_speed, distDelay);
+    SetMotors(0,1, r_speed, r_speed, angleDelay);
+}
+
 # endif
 
-
-
+// ********************************************************************
 
 
 
