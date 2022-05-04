@@ -1196,9 +1196,11 @@ void zmain(void)
     codeStart= xTaskGetTickCount();
     
     int start=0, stop=0;
-    // int line=0, miss=0;
+    
+    // Mqtt code
+    int line=0, miss=0;
+    // Mqtt
 
-    //struct sensors_ ref;
     struct sensors_ dig;
     IR_Start();
     
@@ -1207,10 +1209,9 @@ void zmain(void)
     int slowSpeed = 160;
     int speed=230;
     int tankTurnSpeed = 230;
-    int turnSpeed = 230;
+    int turnSpeed = 200;
     int turnMinSpeed = 0;
-    // int turnSharpSpeed = 255;
-    // int turnMinSharpSpeed = 0;
+
     
     int maxcons = 2;
     int count = 0;
@@ -1229,6 +1230,7 @@ void zmain(void)
     // waiting for user to press the switch button and lift from the button
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(1000);
+    
     
     // check if the vehicle is centered.
     do{
@@ -1274,7 +1276,7 @@ void zmain(void)
                 BatteryLed_Write(0);
                 start = xTaskGetTickCount();
                 print_mqtt("Zumo06/", "start: %d",start-codeStart);
-                //line=1;
+                line=1;             //Mqtt code
                 motor_forward(160,200);
                 
             }else if (inersectionCounter==2){
@@ -1294,23 +1296,14 @@ void zmain(void)
         // go straight before first intersection line
         if(dig.L1==1 && dig.R1==1 && inersectionCounter<1){
             motor_forward(slowSpeed,delay);
-            
-            // print line once it turns back from miss
-            /*
-            if (miss==1){
-                print_mqtt("Zumo06/", "line");
-                miss=0;
-                line=1;}
-            */
         } 
         
         
         // go straight after first intersection line
         else if(dig.L1==1 && dig.R1==1 && inersectionCounter>=1){
             motor_forward(speed,delay);
-            
-            // print line once it turns back from miss
             /*
+            // print line once it turns back from miss
             if (miss==1){
                 print_mqtt("Zumo06/", "line");
                 miss=0;
@@ -1320,37 +1313,19 @@ void zmain(void)
         
         // slow turn left
         else if(dig.L2==1 && dig.L1==1){
-            motor_turn(turnMinSpeed,turnSpeed,delay);
-            
-            // print miss once it deviate from line
-            /*
-            if  (line==1){
-            print_mqtt("Zumo06/", "miss");
-            miss=1;
-            line=0;}
-            */
+            motor_turn(turnMinSpeed,turnSpeed,delay);          
         } 
         
         // slow turn right
         else if(dig.R1==1 && dig.R2==1){
             motor_turn(turnSpeed,turnMinSpeed,delay);
-            
-            // print miss once it deviate from line
-            /*
-            if  (line==1){
-            print_mqtt("Zumo06/", "miss");
-            miss=1;
-            line=0;}
-            */
         } 
         
         // sharp turn left
         else if(dig.L3==1 && dig.L2==1){
-            // motor_turn(turnMinSharpSpeed,turnSharpSpeed,delay);
             tank_left(tankTurnSpeed,delay);
-            
-            // print miss once it deviate from line
             /*
+            // print miss once it deviate from line
             if  (line==1){
             print_mqtt("Zumo06/", "miss");
             miss=1;
@@ -1360,10 +1335,9 @@ void zmain(void)
         
         // sharp turn right
         else if(dig.R2==1 && dig.R3==1){
-            // motor_turn(turnSharpSpeed,turnMinSharpSpeed,delay);
             tank_right(tankTurnSpeed,delay);
-            // print miss once it deviate from line
             /*
+            // print miss once it deviate from line
             if  (line==1){
             print_mqtt("Zumo06/", "miss");
             miss=1;
@@ -1390,7 +1364,7 @@ void tank_right(uint8 r_speed, uint32 delay)
 
 // Maze runner project group 6 Code
 
-#if 1
+#if 0
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay);
@@ -1408,9 +1382,9 @@ void zmain(void)
     
     int delay=0;
     int speed=50;
-    int turnSpeed = 220;
+    int turnSpeed = 100;
     int turnMinSpeed = 0;
-    int turnSharpSpeed = 255;
+    int turnSharpSpeed = 180;
     int turnMinSharpSpeed = 0;
     
     int halfDist=22000;
@@ -1426,7 +1400,7 @@ void zmain(void)
     
     int X=0;
     int Y=0;
-    int back=0, side=0, right=0;
+    int back=0, side=0, right=0, margin=0;
     
     
     motor_start();
@@ -1434,21 +1408,8 @@ void zmain(void)
     
     reflectance_start();
     reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); 
-    
-    
-    /*
-    while(true){
-        reflectance_read(&ref);
-        printf("%5d %5d %5d %5d %5d %5d\r\n", ref.L3, ref.L2, ref.L1, ref.R1, ref.R2, ref.R3);       
-        
-        reflectance_digital(&dig); 
-        printf("%5d %5d %5d %5d %5d %5d \r\n", dig.L3, dig.L2, dig.L1, dig.R1, dig.R2, dig.R3);
-        vTaskDelay(5000);
-    }
-    */
-    
-    
-    
+
+
     // waiting for user to press the switch button and lift from the button
     /*
     while(SW1_Read() == 1) vTaskDelay(10);
@@ -1489,7 +1450,7 @@ void zmain(void)
         }
         
         
-
+        
         
         if(counter==2){
             count = 0;
@@ -1516,13 +1477,21 @@ void zmain(void)
                 
                 X=X+side;
                 
-                if (X==-3){
+                if (Y<=10){
+                    margin=3;
+                }else if(Y==11){
+                    margin=2;
+                } else if(Y==12){
+                    margin=1;
+                }
+                
+                if (X==-margin){
                     right =1;
                 }
                 
 
                 
-                if (back==1 && X>-3 && right==0){
+                if (back==1 && X>-margin && right==0){
                     tank_left(speed, halfDist/speed, halfAngle/speed);
                     side=-1;
                     back=0;
@@ -1532,7 +1501,7 @@ void zmain(void)
                     back=0;
                 }
                 
-                if (back==1 && X<3 && right==1){
+                if (back==1 && X<margin && right==1){
                     tank_right(speed, halfDist/speed, halfAngle/speed);
                     side=1;
                     back=0;
@@ -1761,7 +1730,7 @@ void check_obstacle(struct sensors_ *dig){
 // Sumo wrestling group 6 Code
 
 
-#if 0
+#if 1
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 delay);
@@ -1776,15 +1745,18 @@ void zmain(void)
 
     int slowSpeed = 100;
     int delay=0;
-    int speed=0;
+    int speed=230;
     int backTime = 300;
     int inersectionCounter=0;
     int c=0;
     double angle=0;
+    char robotName[10]="Zumo06_A/";
     
-    int maxXimpact=1500;
-    int maxYimpact=1500;
-    int bufferNumber = 1000;
+    int maxXimpact=16000;
+    int maxYimpact=16000;
+    int bufferNumber = 100;
+    
+
     
     
     int seed = xTaskGetTickCount();
@@ -1799,73 +1771,52 @@ void zmain(void)
     LSM303D_Start();
     
     
-    
-    
-
-    
-    
-    
     // waiting for user to press the switch button and lift from the button
     
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(1000);
-
-/*
-    while(true){
-    //motor_forward(255,0);
-    LSM303D_Read_Acc(&data);
-    //print_mqtt("Zumo06/acc","%d, %d",data.accX, data.accY);
-    printf("%d\n",data.accX);
-    vTaskDelay(100);
-    }
-    */
     
+    /*
+    // calibration of acceleration code starts here
+    int forward=0;
+    int backward=0;
+    int dummy=0;
     
     while(true){
         LSM303D_Read_Acc(&data);
         
-        if (c<bufferNumber){
-            c++;
+        if(c<100){
+        c++;
         }
         
-        // 0 to 90 degree
-        if (data.accX < -maxXimpact && data.accY < -maxYimpact && c==bufferNumber){
-            angle = atan(abs(data.accY)/abs(data.accX))*180.0/PI;
-            print_mqtt("Zumo06/", "Angle a: %.2f",angle);
+        if((abs(data.accX) > maxXimpact||abs(data.accY) > maxYimpact)&&c==100){
+            print_mqtt(robotName, "X: %d, Y: %d",data.accX, data.accY);
             c=0;
         }
         
-        // 90 to 180 degree
-        else if (data.accX > maxXimpact && data.accY < -maxYimpact && c==bufferNumber){
-            angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
-            print_mqtt("Zumo06/", "Angle b: %.2f",angle);
-            c=0;
-        }
+        if(forward<300 && dummy==0){
+        motor_forward(255,delay);
+        forward++;
+        dummy=0;
         
-        // 180 to 270 degree
-        else if (data.accX > maxXimpact && data.accY > maxYimpact && c==bufferNumber){
-            angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180.0/PI;
-            print_mqtt("Zumo06/", "Angle c: %.2f",angle);
-            c=0;
-        } 
-        
-        // 270 to 360 degree
-        else if (data.accX < -maxXimpact && data.accY > maxYimpact && c==bufferNumber){
-            angle = 270.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
-            print_mqtt("Zumo06/", "Angle d: %.2f",angle);
-            c=0;
+        if(forward==300){
+            dummy=1;
+            backward=0;
         }
-    
+        }
+        else if(backward<300 && dummy==1){
+        motor_backward(255,delay);
+        backward++;
+        dummy=1;
+        if(backward==300){
+            dummy=0;
+            forward=0;
+        }
+        }
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    // calibration code ends here
+    */
+
     
     // check if the vehicle is centered.
     do{
@@ -1873,11 +1824,11 @@ void zmain(void)
     } 
     while(dig.L1==0 || dig.R1==0);
     
-    
+    // find intersection
     while(inersectionCounter==0){
         reflectance_digital(&dig); 
-        
         motor_forward(slowSpeed,delay);
+        
         if(dig.L3==1 && dig.R3==1 ){
             motor_forward(0,0);
             IR_wait();
@@ -1915,48 +1866,78 @@ void zmain(void)
             tank_left(speed,50000/speed + r*50000/speed/10);
         } 
         
-        /*
+        
         
         if (c<bufferNumber){
             c++;
         }
         
-       
-        
-        // 0 to 90 degree
-        if (data.accX < -maxXimpact && data.accY < -maxYimpact && c==bufferNumber){
-            angle = atan(abs(data.accY)/abs(data.accX))*180/PI;
-            print_mqtt("Zumo06/", "Angle: %.2f",angle);
-            c=0;
-        }
-        
-        // 90 to 180 degree
-        else if (data.accX > maxXimpact && data.accY < -maxYimpact && c==bufferNumber){
-            angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180/PI;
-            print_mqtt("Zumo06/", "Angle: %.2f",angle);
-            c=0;
-        }
-        
-        // 180 to 270 degree
-        else if (data.accX > maxXimpact && data.accY > maxYimpact && c==bufferNumber){
-            angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180/PI;
-            print_mqtt("Zumo06/", "Angle: %.2f",angle);
-            c=0;
-        } 
-        
-        // 270 to 360 degree
-        else if (data.accX < -maxXimpact && data.accY > maxYimpact && c==bufferNumber){
-            angle = 270.0 + atan(abs(data.accX)/abs(data.accY))*180/PI;
-            print_mqtt("Zumo06/", "Angle: %.2f",angle);
-            c=0;
-        }
-        
-        */
-        
-        //printf("%8d %8d\n",data.accX, data.accY);
 
-
+        // 0 to 90 degree or 0 to 270
+        if (data.accX < -maxXimpact && c==bufferNumber){
+            if (data.accY>0){
+                // angle is 0 to 90 degree
+                angle = atan(abs(data.accY)/abs(data.accX))*180.0/PI;
+                print_mqtt(robotName, "Angle: %.0f",angle);
+                c=0;
+            }
+            
+            else{
+                // angle is 0 to 270 degree
+                angle = 270.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
+                print_mqtt(robotName, "Angle: %.0f",angle);
+                c=0;
+            }
+        }
+        
+        // 0 to 90 and 90 to 180
+        else if(data.accY > maxYimpact && c==bufferNumber){
+            if (data.accX<0){
+                // angle is 0 to 90 degree
+                angle = atan(abs(data.accY)/abs(data.accX))*180.0/PI;
+                print_mqtt(robotName, "Angle: %.0f",angle);
+                c=0;
+            } else{
+                // angle is 90 to 180
+            angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
+            print_mqtt(robotName, "Angle: %.0f",angle);
+            c=0;
+            }
+        }
+        
+        // 90 to 180 and 180 to 270
+        else if(data.accX > maxXimpact && c==bufferNumber){
+            if(data.accY>0){
+                // angle is 90 to 180
+                angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
+                print_mqtt(robotName, "Angle: %.0f",angle);
+                c=0;
+            }
+            else{
+                // angle is 180 to 270
+                angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180.0/PI;
+                print_mqtt(robotName, "Angle: %.0f",angle);
+                c=0;
+            }
+        }
+        
+        // 180 to 270 and 270 to 360
+        else if(data.accY < -maxYimpact && c==bufferNumber){
+            if(data.accX>0){
+                // angle is 180 to 270
+                angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180.0/PI;
+                print_mqtt(robotName, "Angle: %.0f",angle);
+                c=0;
+            }else{
+                // angle is 270 to 360
+                angle = 270.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
+                print_mqtt(robotName, "Angle: %.0f",angle);
+                c=0;
+            }
+        }
+        
     }
+    // WHILE LOOP ENDS HERE
 }
 
 void tank_left(uint8 l_speed, uint32 delay)
