@@ -1872,7 +1872,7 @@ void zmain(void)
     
     // variables controlling speed and course adjustment parameters
     int delay=0;
-    int speed=100;
+    int speed=70;
     int turnSpeed = 200;
     int turnMinSpeed = 0;
     int turnSharpSpeed = 250;
@@ -2031,7 +2031,7 @@ void zmain(void)
         }
         
         // detect obstruction and ask to back
-        if (d<4){
+        if (d<1){
             back=1;
         }
         
