@@ -29,31 +29,31 @@
     </p>
 */
 
-#include <project.h>
-#include <stdio.h>
-#include "FreeRTOS.h"
-#include "task.h"
-#include "Motor.h"
-#include "Ultra.h"
-#include "Nunchuk.h"
-#include "Reflectance.h"
-#include "Gyro.h"
-#include "Accel_magnet.h"
-#include "LSM303D.h"
-#include "IR.h"
-#include "Beep.h"
-#include "mqtt_sender.h"
-#include <time.h>
-#include <sys/time.h>
-#include "serial1.h"
-#include <unistd.h>
-#include <stdlib.h>
-#define PI 3.141592654
+
+#include <defination.h>
+#include <header.h>
+
+
 /**
  * @file    main.c
  * @brief   
  * @details  ** Enable global interrupt since Zumo library uses interrupts. **<br>&nbsp;&nbsp;&nbsp;CyGlobalIntEnable;<br>
 */
+#if 1
+void zmain(void){
+    //sumo();
+    
+    line_follower();
+    
+    //maze_runner();
+    
+    while(true){vTaskDelay(10);}
+}
+#endif
+
+
+
+
 
 #if 0
 // Hello World!
@@ -1361,23 +1361,21 @@ void check_obstacle(struct sensors_ *dig){
 
 
 
-
 // **************************** PROJECT 1 *********************
 // Sumo wrestling group 6:
 // ***********************************************************
 
 #if 0
-
-    // Initializing tank turn
+    // Initializing tank turn function
     void tank_left(uint8 l_speed, uint32 delay);
     void tank_right(uint8 r_speed, uint32 delay);
     
 void zmain(void)
 {
 
-    // Code starting time stamp
-    int codeStart=xTaskGetTickCount();
-    int start=0, end=0, hit=0;
+    // Code starting time stamp when power button is switched on
+    int code_start = xTaskGetTickCount();
+    int start_time = 0, end_time = 0, hit_time = 0;
     
     Ultra_Start();   
     struct sensors_ dig;
@@ -1385,19 +1383,19 @@ void zmain(void)
     struct accData_ data;
 
     // Internal variables controlling robot spped and time
-    int slowSpeed = 100;
-    int delay=0;
-    int speed=230;
-    int backTime = 300;
-    int inersectionCounter=0;
-    int c=0;
-    double angle=0;
-    char robotName[10]="Zumo06/";
+    int slow_speed = 100;
+    int delay = 0;
+    int speed = 230;
+    int back_time = 300;
+    int intersection_counter = 0;
+    int counter = 0;
+    double impact_angle = 0;
+    char robotName[10] = "Zumo06/";
     
     // caliberated varibles of acceleration and time window to to filter noise
-    int maxXimpact=16000;
-    int maxYimpact=16000;
-    int bufferNumber = 100;
+    int max_x_impact_acc = 16000;
+    int max_y_impact_acc = 16000;
+    int buffer_time = 100;
     
     // Starting Motor
     motor_start();
@@ -1411,77 +1409,35 @@ void zmain(void)
     LSM303D_Start();
     
     
-    // waiting for user to press the switch button and lift from the button
+    // waiting for user to press the switch button and lift from the button and wait 1 sec
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(1000);
     
 
-    
     // Initializing seed for random algorithm 
     int seed = xTaskGetTickCount();
     srand(seed);
     
     
-    /*
-    // calibration of acceleration code starts here
-    int forward=0;
-    int backward=0;
-    int dummy=0;
-    
-    while(true){
-        LSM303D_Read_Acc(&data);
-        
-        if(c<100){
-        c++;
-        }
-        
-        if((abs(data.accX) > maxXimpact||abs(data.accY) > maxYimpact)&&c==100){
-            print_mqtt(robotName, "X: %d, Y: %d",data.accX, data.accY);
-            c=0;
-        }
-        
-        if(forward<300 && dummy==0){
-        motor_forward(255,delay);
-        forward++;
-        dummy=0;
-        
-        if(forward==300){
-            dummy=1;
-            backward=0;
-        }
-        }
-        else if(backward<300 && dummy==1){
-        motor_backward(255,delay);
-        backward++;
-        dummy=1;
-        if(backward==300){
-            dummy=0;
-            forward=0;
-        }
-        }
-    }
-    // calibration code ends here
-    */
-
-    
     // check if the vehicle is centered.
     do{
         reflectance_digital(&dig);
     } 
-    while(dig.L1==0 || dig.R1==0);
+    while(dig.L1 == 0 || dig.R1 == 0);
     
+
     // find first intersection
-    while(inersectionCounter==0){
+    while(intersection_counter == 0){
         reflectance_digital(&dig); 
-        motor_forward(slowSpeed,delay);
+        motor_forward(slow_speed, delay);
         
-        if(dig.L3==1 && dig.R3==1 ){
-            motor_forward(0,0);
+        if(dig.L3 == 1 && dig.R3 == 1 ){
+            motor_forward(0, 0);
             print_mqtt(robotName, "ready zumo");
             IR_wait();  // wait for IR from user
-            start=xTaskGetTickCount()-codeStart;
-            print_mqtt(robotName, "start: %d",start);
-            inersectionCounter++;
+            start_time = xTaskGetTickCount() - code_start;
+            print_mqtt(robotName, "stat: %d", start_time);
+            intersection_counter++;
             motor_forward(speed,500);
         }
     }
@@ -1490,126 +1446,129 @@ void zmain(void)
     while(SW1_Read() == 1)
     {
         LSM303D_Read_Acc(&data);
-        int d = Ultra_GetDistance();
-        int r = rand() % 6;
+        int obstacle_distance = Ultra_GetDistance();
+        int random_number = rand() % 6;
         
         // moving motor forward normally
-        motor_forward(speed,delay);
+        motor_forward(speed, delay);
         reflectance_digital(&dig); 
         
         // Speeding up when robot sees some obstacles nearby
-        if(d < 10) {
-            motor_forward(255,delay);
+        if(obstacle_distance < 10) {
+            motor_forward(255, delay);
         }
 
         
-        // Reverse and tank turn right with random angle
-        if(dig.L3==1 || dig.L2==1 || dig.L1==1){
-            motor_backward(speed,backTime);
-            tank_right(speed,50000/speed + r*50000/speed/10);
+        // Reverse and tank turn right with random impact_angle
+        if(dig.L3 == 1 || dig.L2 == 1 || dig.L1 == 1){
+            motor_backward(speed, back_time);
+            tank_right(speed, 50000/speed + random_number * 50000/speed/10 );
         }
         
-        // Reverse and tank turn left with random angle
-        else if(dig.R3==1 || dig.R2==1 || dig.R1==1){
-            motor_backward(speed,backTime);
-            tank_left(speed,50000/speed + r*50000/speed/10);
+        // Reverse and tank turn left with random impact_angle
+        else if(dig.R3 == 1 || dig.R2 == 1 || dig.R1 == 1){
+            motor_backward(speed,back_time);
+            tank_left(speed, 50000/speed + random_number * 50000/speed/10);
         } 
         
         
         // time for ignore acceleration spikes once impact acceleration is detected
-        if (c<bufferNumber){
-            c++;
+        if (counter < buffer_time){
+            counter++;
         }
         
 
         // 0 to 90 degree or 0 to 270
-        if (data.accX < -maxXimpact && c==bufferNumber){
-            if (data.accY>0){
-                // angle is 0 to 90 degree
-                angle = atan(1.0*abs(data.accY)/abs(data.accX))*180.0/PI;
-                hit=xTaskGetTickCount();
-                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
-                c=0;
+        if (data.accX < -max_x_impact_acc  && counter == buffer_time){
+            if (data.accY > 0){
+                // impact_angle is 0 to 90 degree
+                impact_angle = atan(1.0*abs(data.accY) / abs(data.accX)) * 180.0/PI;
+                hit_time = xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f", hit_time - code_start, impact_angle);
+                counter = 0;
             }
             
             else{
-                // angle is 0 to 270 degree
-                angle = 270.0 + atan(1.0*abs(data.accX)/abs(data.accY))*180.0/PI;
-                hit=xTaskGetTickCount();
-                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
-                c=0;
+                // impact_angle is 0 to 270 degree
+                impact_angle = 270.0 + atan(1.0*abs(data.accX) / abs(data.accY)) * 180.0/PI;
+                hit_time = xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit_time - code_start, impact_angle);
+                counter=0;
             }
         }
         
         // 0 to 90 and 90 to 180
-        else if(data.accY > maxYimpact && c==bufferNumber){
-            if (data.accX<0){
-                // angle is 0 to 90 degree
-                angle = atan(1.0*abs(data.accY)/abs(data.accX))*180.0/PI;
-                hit=xTaskGetTickCount();
-                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
-                c=0;
+        else if(data.accY > max_y_impact_acc && counter == buffer_time){
+            if (data.accX < 0){
+                // impact_angle is 0 to 90 degree
+                impact_angle = atan(1.0*abs(data.accY) / abs(data.accX)) * 180.0/PI;
+                hit_time = xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f", hit_time - code_start, impact_angle);
+                counter = 0;
             } else{
-                // angle is 90 to 180
-            angle = 90.0 + atan(1.0*abs(data.accX)/abs(data.accY))*180.0/PI;
-                hit=xTaskGetTickCount();
-                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
-            c=0;
+                // impact_angle is 90 to 180
+            impact_angle = 90.0 + atan(1.0*abs(data.accX) / abs(data.accY)) * 180.0/PI;
+                hit_time = xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f", hit_time - code_start, impact_angle);
+            counter = 0;
             }
         }
         
         // 90 to 180 and 180 to 270
-        else if(data.accX > maxXimpact && c==bufferNumber){
-            if(data.accY>0){
-                // angle is 90 to 180
-                angle = 90.0 + atan(1.0*abs(data.accX)/abs(data.accY))*180.0/PI;
-                hit=xTaskGetTickCount();
-                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
-                c=0;
+        else if(data.accX > max_x_impact_acc  && counter == buffer_time){
+            if(data.accY > 0){
+                // impact_angle is 90 to 180
+                impact_angle = 90.0 + atan(1.0*abs(data.accX) / abs(data.accY)) * 180.0/PI;
+                hit_time = xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f", hit_time - code_start, impact_angle);
+                counter = 0;
             }
             else{
-                // angle is 180 to 270
-                angle = 180.0 + atan(1.0*abs(data.accY)/abs(data.accX))*180.0/PI;
-                hit=xTaskGetTickCount();
-                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
-                c=0;
+                // impact_angle is 180 to 270
+                impact_angle = 180.0 + atan(1.0*abs(data.accY) / abs(data.accX)) * 180.0/PI;
+                hit_time=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f", hit_time - code_start, impact_angle);
+                counter = 0;
             }
         }
         
         // 180 to 270 and 270 to 360
-        else if(data.accY < -maxYimpact && c==bufferNumber){
-            if(data.accX>0){
-                // angle is 180 to 270
-                angle = 180.0 + atan(1.0*abs(data.accY)/abs(data.accX))*180.0/PI;
-                hit=xTaskGetTickCount();
-                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
-                c=0;
+        else if(data.accY < -max_y_impact_acc && counter == buffer_time){
+            if(data.accX > 0){
+                // impact_angle is 180 to 270
+                impact_angle = 180.0 + atan(1.0*abs(data.accY) / abs(data.accX)) * 180.0/PI;
+                hit_time = xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f", hit_time - code_start, impact_angle);
+                counter = 0;
             }else{
-                // angle is 270 to 360
-                angle = 270.0 + atan(1.0*abs(data.accX)/abs(data.accY))*180.0/PI;
-                hit=xTaskGetTickCount();
-                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
-                c=0;
+                // impact_angle is 270 to 360
+                impact_angle = 270.0 + atan(1.0*abs(data.accX) / abs(data.accY)) * 180.0/PI;
+                hit_time = xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f", hit_time - code_start, impact_angle);
+                counter = 0;
             }
         }
         
     }
     motor_forward(0,0);
     motor_stop();
-    end = xTaskGetTickCount();
-    print_mqtt(robotName, "stop: %d",end-codeStart);
-    print_mqtt(robotName, "time: %d",end-start);
+    end_time = xTaskGetTickCount();
+    print_mqtt(robotName, "stop: %d", end_time - code_start);
+    print_mqtt(robotName, "time: %d", end_time - start_time);
 }
 
+// function for left tank turn
 void tank_left(uint8 l_speed, uint32 delay)
 {
     SetMotors(1,0, l_speed, l_speed, delay);
 }
 
+// function for right tank turn
 void tank_right(uint8 r_speed, uint32 delay)
 {
     SetMotors(0,1, r_speed, r_speed, delay);
 }
+
 
 # endif
 // ****************************************************
@@ -1856,7 +1815,7 @@ void tank_right(uint8 r_speed, uint32 delay)
 // ********************* PROJECT 3 ******************************************
 // Maze runner project group 6 Code with start time end time and coordinate complete
 // **************************************************************************
-#if 1
+#if 0
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay);
@@ -2094,6 +2053,7 @@ void tank_right(uint8 r_speed, uint32 distDelay, uint32 angleDelay)
 # endif
 
 // ********************************************************************
+
 
 
 
