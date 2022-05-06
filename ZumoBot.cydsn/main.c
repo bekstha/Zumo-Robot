@@ -1366,7 +1366,7 @@ void check_obstacle(struct sensors_ *dig){
 // Sumo wrestling group 6:
 // ***********************************************************
 
-#if 1
+#if 0
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 delay);
@@ -1374,6 +1374,8 @@ void check_obstacle(struct sensors_ *dig){
     
 void zmain(void)
 {
+
+    // Code starting time stamp
     int codeStart=xTaskGetTickCount();
     int start=0, end=0, hit=0;
     
@@ -1390,7 +1392,7 @@ void zmain(void)
     int inersectionCounter=0;
     int c=0;
     double angle=0;
-    char robotName[10]="Zumo06_A/";
+    char robotName[10]="Zumo06/";
     
     // caliberated varibles of acceleration and time window to to filter noise
     int maxXimpact=16000;
@@ -1412,6 +1414,8 @@ void zmain(void)
     // waiting for user to press the switch button and lift from the button
     while(SW1_Read() == 1) vTaskDelay(10);
     while(SW1_Read() == 0) vTaskDelay(1000);
+    
+
     
     // Initializing seed for random algorithm 
     int seed = xTaskGetTickCount();
@@ -1520,75 +1524,71 @@ void zmain(void)
 
         // 0 to 90 degree or 0 to 270
         if (data.accX < -maxXimpact && c==bufferNumber){
-            hit=xTaskGetTickCount();
-            print_mqtt(robotName, "hit: %d",hit-codeStart);
-            
             if (data.accY>0){
                 // angle is 0 to 90 degree
-                angle = atan(abs(data.accY)/abs(data.accX))*180.0/PI;
-                print_mqtt(robotName, "Angle: %.0f",angle);
+                angle = atan(1.0*abs(data.accY)/abs(data.accX))*180.0/PI;
+                hit=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
                 c=0;
             }
             
             else{
                 // angle is 0 to 270 degree
-                angle = 270.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
-                print_mqtt(robotName, "Angle: %.0f",angle);
+                angle = 270.0 + atan(1.0*abs(data.accX)/abs(data.accY))*180.0/PI;
+                hit=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
                 c=0;
             }
         }
         
         // 0 to 90 and 90 to 180
         else if(data.accY > maxYimpact && c==bufferNumber){
-            hit=xTaskGetTickCount();
-            print_mqtt(robotName, "hit: %d",hit-codeStart);
-            
             if (data.accX<0){
                 // angle is 0 to 90 degree
-                angle = atan(abs(data.accY)/abs(data.accX))*180.0/PI;
-                print_mqtt(robotName, "Angle: %.0f",angle);
+                angle = atan(1.0*abs(data.accY)/abs(data.accX))*180.0/PI;
+                hit=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
                 c=0;
             } else{
                 // angle is 90 to 180
-            angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
-            print_mqtt(robotName, "Angle: %.0f",angle);
+            angle = 90.0 + atan(1.0*abs(data.accX)/abs(data.accY))*180.0/PI;
+                hit=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
             c=0;
             }
         }
         
         // 90 to 180 and 180 to 270
         else if(data.accX > maxXimpact && c==bufferNumber){
-            hit=xTaskGetTickCount();
-            print_mqtt(robotName, "hit: %d",hit-codeStart);
-            
             if(data.accY>0){
                 // angle is 90 to 180
-                angle = 90.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
-                print_mqtt(robotName, "Angle: %.0f",angle);
+                angle = 90.0 + atan(1.0*abs(data.accX)/abs(data.accY))*180.0/PI;
+                hit=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
                 c=0;
             }
             else{
                 // angle is 180 to 270
-                angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180.0/PI;
-                print_mqtt(robotName, "Angle: %.0f",angle);
+                angle = 180.0 + atan(1.0*abs(data.accY)/abs(data.accX))*180.0/PI;
+                hit=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
                 c=0;
             }
         }
         
         // 180 to 270 and 270 to 360
         else if(data.accY < -maxYimpact && c==bufferNumber){
-            hit=xTaskGetTickCount();
-            print_mqtt(robotName, "hit: %d",hit-codeStart);
-            
             if(data.accX>0){
                 // angle is 180 to 270
-                angle = 180.0 + atan(abs(data.accY)/abs(data.accX))*180.0/PI;
-                print_mqtt(robotName, "Angle: %.0f",angle);
+                angle = 180.0 + atan(1.0*abs(data.accY)/abs(data.accX))*180.0/PI;
+                hit=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
                 c=0;
             }else{
                 // angle is 270 to 360
-                angle = 270.0 + atan(abs(data.accX)/abs(data.accY))*180.0/PI;
-                print_mqtt(robotName, "Angle: %.0f",angle);
+                angle = 270.0 + atan(1.0*abs(data.accX)/abs(data.accY))*180.0/PI;
+                hit=xTaskGetTickCount();
+                print_mqtt(robotName, "hit: %d, Angle: %.0f",hit-codeStart, angle);
                 c=0;
             }
         }
@@ -1649,7 +1649,7 @@ void zmain(void)
     // time marker for code start
     int codeStart;
     codeStart= xTaskGetTickCount();
-    
+   
     int start=0, stop=0;
     
     // Mqtt code
@@ -1661,11 +1661,11 @@ void zmain(void)
     
     // Internal Variables to control speed and turning speed
     int delay=0;
-    int slowSpeed = 160;
-    int speed=230;
-    int tankTurnSpeed = 230;
-    int turnSpeed = 200;
-    int turnMinSpeed = 0;
+    int slowSpeed = 100;
+    int speed=235;
+    int turnSpeed = 235;
+    int tankTurnSpeed = 180;
+    int turnMinSpeed = 90;
 
     // internal variables for intersection counter and filter any noise if happen so based on maxcons number.
     int maxcons = 2;
@@ -1856,7 +1856,7 @@ void tank_right(uint8 r_speed, uint32 delay)
 // ********************* PROJECT 3 ******************************************
 // Maze runner project group 6 Code with start time end time and coordinate complete
 // **************************************************************************
-#if 0
+#if 1
 
     // Initializing tank turn
     void tank_left(uint8 l_speed, uint32 distDelay, uint32 angleDelay);
